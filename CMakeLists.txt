@@ -45,6 +45,27 @@ if(BUILD_TESTING)
       src/protocol
   )
 
+  # SensorForge GoogleTest unit suite (Extension G). Non-ROS; links the core
+  # protocol/replay library. Reports its executed-assertion count as
+  # "[ASSERTIONS] total=..." (must be >= 5000).
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(sensorforge_unit_tests
+    test/unit/test_main.cpp
+    test/unit/test_crc32c.cpp
+    test/unit/test_frame_codec.cpp
+    test/unit/test_spsc_ring.cpp
+    test/unit/test_seqlock.cpp
+    test/unit/test_wal.cpp
+    test/unit/test_backpressure.cpp
+    test/unit/test_tcp_reassembler.cpp
+  )
+  if(TARGET sensorforge_unit_tests)
+    target_include_directories(sensorforge_unit_tests PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/unit
+      ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_link_libraries(sensorforge_unit_tests sensorforge_protocol)
+  endif()
+
   # NOTE: the internal launch tests wait up to 10s (spin_until_future_complete)
   # for a round trip; the old 2s CMake TIMEOUT killed the first-run test during
   # cold DDS discovery (order-dependent flake). Give discovery adequate room.
