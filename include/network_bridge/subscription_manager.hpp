@@ -29,7 +29,13 @@ SOFTWARE.
 #include <memory>
 #include <string>
 #include <vector>
+#include <cstdint>
 #include <rclcpp/rclcpp.hpp>
+
+#include "sensorforge/core/spsc_ring.hpp"
+#include "sensorforge/core/sensor_frame.hpp"
+#include "sensorforge/core/backpressure_policy.hpp"
+#include "sensorforge/protocol/frame.hpp"
 
 /**
  * @class SubscriptionManager
@@ -110,7 +116,8 @@ public:
    * @brief Callback function for handling serialized messages.
    *
    * This function is called when a serialized message is received by the subscription manager.
-   * It stores the data from serialized_msg into the data_ vector.
+   * It pushes the data from serialized_msg into the SPSC ring under this
+   * stream's backpressure policy.
    *
    * @param serialized_msg A shared pointer to the serialized message.
    */
@@ -143,6 +150,23 @@ public:
    */
   int zstd_compression_level_;
 
+  /// Compile-time ring capacity per stream (power of two).
+  static constexpr size_t kRingCapacity = 1024;
+
+  /// Set the sensor type (selects the default backpressure policy). Defaults
+  /// to kControl for the generic bridge; dedicated sensor publishers override.
+  void set_sensor_type(sensorforge::protocol::SensorType t)
+  {
+    sensor_type_ = t;
+    policy_ = sensorforge::core::default_policy_for(t);
+  }
+
+  /// Producer/consumer counters for metrics (approximate, lock-free).
+  uint64_t enqueued_count() const {return enqueued_count_;}
+  uint64_t dropped_count() const {return dropped_count_;}
+  uint64_t overwritten_count() const {return overwritten_count_;}
+  size_t ring_occupancy() const {return ring_.size_approx();}
+
 protected:
   bool topic_found_;
   /**
@@ -166,7 +190,32 @@ protected:
   rclcpp::GenericSubscription::SharedPtr subscriber;
 
   /**
-   * @brief The data buffer for the subscription manager.
+   * @brief Lock-free SPSC ring holding captured frames.
+   *
+   * Producer: the ROS2 subscription callback thread (callback()).
+   * Consumer: the send-timer thread (get_data()).
+   * Replaces the previous single-slot data_ buffer.
    */
-  std::vector<uint8_t> data_;
+  sensorforge::core::SPSCRing<sensorforge::core::SensorFrame, kRingCapacity> ring_;
+
+  /**
+   * @brief The most recently popped frame. get_data() returns a reference into
+   *        this so the public API (const std::vector<uint8_t> &) is preserved,
+   *        and it doubles as the "last value" resent when publish_stale_data_.
+   */
+  sensorforge::core::SensorFrame current_frame_;
+
+  /// Per-stream capture sequence counter (producer side).
+  uint64_t capture_sequence_ = 0;
+
+  /// Backpressure policy + sensor classification for this stream.
+  sensorforge::protocol::SensorType sensor_type_ =
+    sensorforge::protocol::SensorType::kControl;
+  sensorforge::core::BackpressurePolicy policy_ =
+    sensorforge::core::BackpressurePolicy::kDropNewest;
+
+  /// Metrics counters (single-writer each; read approximately elsewhere).
+  uint64_t enqueued_count_ = 0;
+  uint64_t dropped_count_ = 0;
+  uint64_t overwritten_count_ = 0;
 };

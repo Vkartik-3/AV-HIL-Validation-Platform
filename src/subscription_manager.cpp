@@ -24,6 +24,9 @@ SOFTWARE.
 ==============================================================================
 */
 
+#include <chrono>
+#include <utility>
+
 #include <rclcpp/qos.hpp>
 #include "network_bridge/subscription_manager.hpp"
 
@@ -38,10 +41,13 @@ SubscriptionManager::SubscriptionManager(
   zstd_compression_level_(zstd_compression_level),
   received_msg_(false),
   is_stale_(true),
-  publish_stale_data_(publish_stale_data),
-  data_()
+  publish_stale_data_(publish_stale_data)
 {
   topic_found_ = true;   // optimistic
+  // Generic bridge streams are classified as control traffic (drop-newest by
+  // default). Dedicated sensor publishers call set_sensor_type() to select a
+  // sensor-specific backpressure policy.
+  set_sensor_type(sensor_type_);
 }
 
 SubscriptionManager::~SubscriptionManager() {}
@@ -126,9 +132,32 @@ void SubscriptionManager::callback(
     "Received message on topic %s", topic_.c_str());
   received_msg_ = true;
   is_stale_ = false;
-  data_.resize(serialized_msg->size());
+
+  // Producer side of the SPSC ring: build a frame from the serialized message
+  // and enqueue it under this stream's backpressure policy.
+  sensorforge::core::SensorFrame frame;
+  frame.data.resize(serialized_msg->size());
   auto buff = serialized_msg->get_rcl_serialized_message().buffer;
-  std::copy(buff, buff + serialized_msg->size(), data_.begin());
+  std::copy(buff, buff + serialized_msg->size(), frame.data.begin());
+  frame.sequence = capture_sequence_++;
+  frame.timestamp_ns = static_cast<uint64_t>(
+    std::chrono::duration_cast<std::chrono::nanoseconds>(
+      std::chrono::system_clock::now().time_since_epoch()).count());
+
+  const auto result = sensorforge::core::apply_policy(ring_, frame, policy_);
+  switch (result) {
+    case sensorforge::core::PushResult::kEnqueued:
+    case sensorforge::core::PushResult::kBlockedThenEnqueued:
+      ++enqueued_count_;
+      break;
+    case sensorforge::core::PushResult::kOverwrote:
+      ++overwritten_count_;
+      ++enqueued_count_;
+      break;
+    case sensorforge::core::PushResult::kDroppedNewest:
+      ++dropped_count_;
+      break;
+  }
 }
 
 void SubscriptionManager::check_subscription()
@@ -144,10 +173,11 @@ bool SubscriptionManager::has_data() const
   if (!received_msg_) {
     return false;
   }
-  if (this->is_stale() && !publish_stale_data_) {
-    return false;
+  // Fresh data queued in the ring, or the "resend last" path is enabled.
+  if (!ring_.empty_approx()) {
+    return true;
   }
-  return true;
+  return publish_stale_data_;
 }
 
 bool SubscriptionManager::is_stale() const
@@ -161,16 +191,25 @@ const std::vector<uint8_t> & SubscriptionManager::get_data(bool & is_valid)
 
   if (!received_msg_) {
     RCLCPP_WARN(node_->get_logger(), "Send Timer: No message ever received");
-    return data_;
+    return current_frame_.data;
   }
 
+  // Consumer side of the SPSC ring: pop the next queued frame.
+  sensorforge::core::SensorFrame popped;
+  if (ring_.try_pop(popped)) {
+    current_frame_ = std::move(popped);
+    is_stale_ = ring_.empty_approx();
+    is_valid = true;
+    return current_frame_.data;
+  }
 
-  if (this->is_stale() && !publish_stale_data_) {
-    RCLCPP_WARN(node_->get_logger(), "Send Timer: Stored data is stale");
-    return data_;
+  // Ring empty. Optionally resend the last frame we popped.
+  if (publish_stale_data_ && !current_frame_.data.empty()) {
+    is_valid = true;
+    return current_frame_.data;
   }
 
   is_stale_ = true;
-  is_valid = true;
-  return data_;
+  RCLCPP_WARN(node_->get_logger(), "Send Timer: No fresh data in ring");
+  return current_frame_.data;
 }

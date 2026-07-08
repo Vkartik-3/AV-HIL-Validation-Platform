@@ -63,6 +63,17 @@ if(SENSORFORGE_BUILD_BENCH)
   add_subdirectory(bench)
 endif()
 
+# Optional: build the concurrency stress test (Extension A). Intended to run
+# under -fsanitize=thread in the TSan CI job.
+option(SENSORFORGE_BUILD_STRESS "Build the SensorForge SPSC/seqlock stress test" OFF)
+if(SENSORFORGE_BUILD_STRESS)
+  add_executable(spsc_tsan_stress stress/spsc_tsan_stress.cpp)
+  target_link_libraries(spsc_tsan_stress PRIVATE sensorforge_protocol)
+  target_compile_features(spsc_tsan_stress PRIVATE cxx_std_20)
+  find_package(Threads REQUIRED)
+  target_link_libraries(spsc_tsan_stress PRIVATE Threads::Threads)
+endif()
+
 add_executable(network_bridge
     src/network_bridge.cpp
     src/subscription_manager.cpp
