@@ -86,6 +86,11 @@ endif()
 
 # Optional: build the concurrency stress test (Extension A). Intended to run
 # under -fsanitize=thread in the TSan CI job.
+option(SENSORFORGE_BUILD_FUZZ "Build the SensorForge libFuzzer harnesses (Clang only)" OFF)
+if(SENSORFORGE_BUILD_FUZZ)
+  add_subdirectory(fuzz)
+endif()
+
 option(SENSORFORGE_BUILD_STRESS "Build the SensorForge SPSC/seqlock stress test" OFF)
 if(SENSORFORGE_BUILD_STRESS)
   add_executable(spsc_tsan_stress stress/spsc_tsan_stress.cpp)
