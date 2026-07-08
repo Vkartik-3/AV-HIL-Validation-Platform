@@ -8,49 +8,43 @@ locks, while a single writer updates it in place. It is ideal for
 config/metadata that is read on the hot path (per-frame) but changed rarely
 (e.g. a scenario adjusting a stream's rate or a fault window opening).
 
+Seqlock implementation using relaxed atomics for data fields to avoid UB in
+the C++ abstract machine while maintaining seqlock semantics. Sequence counter
+uses acquire/release for synchronization. Data fields use relaxed atomics --
+torn reads are safe because load() retries if seq changes.
+
+Because T is an arbitrary trivially-copyable type, the payload is stored as a
+byte array of std::atomic<unsigned char> and copied in/out with per-byte
+memory_order_relaxed operations. Every access to shared memory is therefore an
+atomic access: there is no data race in the C++ memory model, so the code is
+UB-free and ThreadSanitizer-clean with ZERO suppressions. The relaxed ordering
+carries no synchronization by itself; all happens-before ordering comes from
+the acquire/release sequence counter, exactly as in a classic seqlock.
+
 Protocol:
   - An atomic sequence counter starts even (= stable).
-  - Writer: increment to odd (write in progress), publish the new value,
-    increment to even (stable again). Two writers are not allowed
-    concurrently (single-writer); a mutex or external discipline serializes
-    writers if needed.
+  - Writer: bump to odd (write in progress), publish the new bytes, bump to
+    even (stable again). Single-writer only; serialize writers externally if
+    there can be more than one.
   - Reader: snapshot the sequence; if odd, a write is in progress -> retry.
-    Read the value, re-read the sequence; if it changed, the value may be
+    Read the bytes, re-read the sequence; if it changed, the snapshot may be
     torn -> retry.
 
-T should be trivially copyable and small (this is not a general mutex).
-
---- ThreadSanitizer note -------------------------------------------------------
-store() and load() are annotated __attribute__((no_sanitize("thread"))).
-
-The seqlock DELIBERATELY reads value_ non-atomically while a writer may be
-updating it; correctness comes from the sequence counter, which forces the
-reader to DISCARD and retry any read that overlapped a write. TSan cannot see
-that protocol-level invariant, so it flags the value_ access as a data race.
-Strictly, in the C++ abstract machine this non-atomic overlap IS a race (the
-same reason the Linux kernel uses READ_ONCE/WRITE_ONCE volatiles); it is
-benign here because torn values are never used. The suppression documents that
-this race is intentional and handled by the retry loop, not overlooked.
 Reference: https://www.kernel.org/doc/html/latest/locking/seqlock.html
-(A fully UB-free alternative is to make value_ access memory_order_relaxed
-atomic, which removes the suppression entirely.)
-================================================================================
+
+T should be trivially copyable and small (this is not a general mutex).
+==============================================================================
 */
 
 #pragma once
 
+#include <array>
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <thread>
 #include <type_traits>
-
-// Disable ThreadSanitizer instrumentation on the annotated function. No-op on
-// non-sanitizer builds and on compilers without the attribute.
-#if defined(__GNUC__) || defined(__clang__)
-#  define SF_NO_SANITIZE_THREAD __attribute__((no_sanitize("thread")))
-#else
-#  define SF_NO_SANITIZE_THREAD
-#endif
 
 namespace sensorforge::core {
 
@@ -58,68 +52,93 @@ template<typename T>
 class Seqlock
 {
   static_assert(std::is_trivially_copyable_v<T>,
-    "Seqlock<T> requires a trivially copyable T (it is memcpy-snapshotted)");
+    "Seqlock<T> requires a trivially copyable T (it is byte-copied)");
 
 public:
-  Seqlock() = default;
+  Seqlock()
+  {
+    write_relaxed(T{});
+  }
 
   explicit Seqlock(const T & initial)
-  : value_(initial) {}
+  {
+    // Constructor runs before any reader exists: seq_ stays 0 (even/stable).
+    write_relaxed(initial);
+  }
+
+  Seqlock(const Seqlock &) = delete;
+  Seqlock & operator=(const Seqlock &) = delete;
 
   /**
    * @brief Reader: return a consistent snapshot, retrying past any in-flight
    *        write. Wait-free in the common (uncontended) case.
    *
-   * TSan-suppressed: see the ThreadSanitizer note in the file header. The
-   * value_ read may overlap a writer; the sequence re-check below discards any
-   * such torn read before it can be observed.
+   * All byte reads are memory_order_relaxed atomics, so no access is a data
+   * race even when they overlap a writer. The acquire load of seq0 synchronizes
+   * with the writer's release publish, and the acquire fence prevents the data
+   * loads from being reordered after the seq1 re-check; if the sequence changed
+   * (or was odd), the snapshot is discarded and retried.
    */
-  SF_NO_SANITIZE_THREAD
   T load() const
   {
-    T copy;
-    uint64_t seq_before;
+    T out;
+    uint64_t seq0;
+    uint64_t seq1;
     do {
-      seq_before = seq_.load(std::memory_order_acquire);
-      if (seq_before & 1u) {
+      seq0 = seq_.load(std::memory_order_acquire);
+      if (seq0 & 1u) {
         // Write in progress; back off briefly and retry.
         std::this_thread::yield();
         continue;
       }
-      copy = value_;
+      read_relaxed(out);
       std::atomic_thread_fence(std::memory_order_acquire);
-      const uint64_t seq_after = seq_.load(std::memory_order_relaxed);
-      if (seq_before == seq_after) {
-        return copy;  // consistent read
-      }
-      // Sequence changed under us -> possible tear -> retry.
-    } while (true);
+      seq1 = seq_.load(std::memory_order_relaxed);
+    } while ((seq0 & 1u) || seq0 != seq1);
+    return out;
   }
 
   /**
    * @brief Writer: publish @p desired. Single-writer only.
    *
-   * TSan-suppressed: see the ThreadSanitizer note in the file header. value_ is
-   * written between the odd/even sequence bumps; concurrent readers detect the
-   * overlap via the sequence change and retry.
+   * Bumps seq_ to odd, writes the bytes with relaxed atomics between two
+   * release fences, then bumps seq_ to even with a release store so readers'
+   * acquire loads observe the completed update.
    */
-  SF_NO_SANITIZE_THREAD
   void store(const T & desired)
   {
     const uint64_t seq = seq_.load(std::memory_order_relaxed);
-    seq_.store(seq + 1, std::memory_order_release);   // -> odd: write in progress
+    seq_.store(seq + 1, std::memory_order_relaxed);   // -> odd: write in progress
     std::atomic_thread_fence(std::memory_order_release);
-    value_ = desired;
+    write_relaxed(desired);
     std::atomic_thread_fence(std::memory_order_release);
-    seq_.store(seq + 2, std::memory_order_release);   // -> even: stable
+    seq_.store(seq + 2, std::memory_order_release);    // -> even: stable/published
   }
 
   /// Current sequence value (even = stable). Exposed for tests/metrics.
   uint64_t sequence() const {return seq_.load(std::memory_order_acquire);}
 
 private:
+  void write_relaxed(const T & v)
+  {
+    unsigned char tmp[sizeof(T)];
+    std::memcpy(tmp, &v, sizeof(T));
+    for (size_t i = 0; i < sizeof(T); ++i) {
+      data_[i].store(tmp[i], std::memory_order_relaxed);
+    }
+  }
+
+  void read_relaxed(T & out) const
+  {
+    unsigned char tmp[sizeof(T)];
+    for (size_t i = 0; i < sizeof(T); ++i) {
+      tmp[i] = data_[i].load(std::memory_order_relaxed);
+    }
+    std::memcpy(&out, tmp, sizeof(T));
+  }
+
   std::atomic<uint64_t> seq_{0};
-  T value_{};
+  std::array<std::atomic<unsigned char>, sizeof(T)> data_{};
 };
 
 }  // namespace sensorforge::core
