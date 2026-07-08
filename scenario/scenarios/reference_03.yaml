@@ -1,0 +1,25 @@
+# Reference scenario 03 - high-load all-sensors, no injected faults.
+# Baseline stress: every stream at high rate for 15 s; assert the platform keeps
+# up (low drop rate, bounded latency, no sequence gaps).
+name: high_load_all_sensors
+duration_seconds: 15
+streams:
+  camera: {rate_hz: 60}
+  lidar: {rate_hz: 20}
+  imu: {rate_hz: 400}
+  gps: {rate_hz: 20}
+  can: {rate_hz: 200}
+faults: []
+assertions:
+  - metric: imu_latency_p99_ms
+    operator: less_than
+    value: 50
+  - metric: camera_drop_rate_pct
+    operator: less_than
+    value: 1.0
+  - metric: lidar_drop_rate_pct
+    operator: less_than
+    value: 1.0
+  - metric: imu_sequence_gaps
+    operator: equals
+    value: 0

@@ -1,0 +1,27 @@
+# Reference scenario 01 - delayed IMU during a maneuver.
+# The IMU stream is delayed by 25 ms for a 3 s window; we assert the p99 IMU
+# latency stays under 30 ms and camera drop rate stays low.
+name: delayed_imu_during_maneuver
+duration_seconds: 30
+streams:
+  camera: {rate_hz: 30}
+  lidar: {rate_hz: 10}
+  imu: {rate_hz: 200}
+  gps: {rate_hz: 20}
+  can: {rate_hz: 100}
+faults:
+  - stream: imu
+    start_seconds: 8
+    duration_seconds: 3
+    type: delay
+    params: {delay_ms: 25}
+assertions:
+  - metric: imu_latency_p99_ms
+    operator: less_than
+    value: 30
+  - metric: camera_drop_rate_pct
+    operator: less_than
+    value: 0.1
+  - metric: imu_sequence_gaps
+    operator: equals
+    value: 0

@@ -18,6 +18,7 @@ find_package(tf2_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(yaml-cpp REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(ZSTD REQUIRED libzstd)
@@ -59,12 +60,14 @@ if(BUILD_TESTING)
     test/unit/test_wal.cpp
     test/unit/test_backpressure.cpp
     test/unit/test_tcp_reassembler.cpp
+    test/unit/test_scenario.cpp
   )
   if(TARGET sensorforge_unit_tests)
     target_include_directories(sensorforge_unit_tests PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/test/unit
+      ${CMAKE_CURRENT_SOURCE_DIR}
       ${CMAKE_CURRENT_SOURCE_DIR}/include)
-    target_link_libraries(sensorforge_unit_tests sensorforge_protocol)
+    target_link_libraries(sensorforge_unit_tests sensorforge_protocol sensorforge_scenario)
   endif()
 
   # NOTE: the internal launch tests wait up to 10s (spin_until_future_complete)
@@ -174,6 +177,32 @@ install(TARGETS
   lidar_publisher camera_publisher imu_publisher gps_publisher can_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
+
+# ---------------------------------------------------------------------------
+# Scenario runner (Extension J): non-ROS parser/assertion lib + ROS runner.
+# ---------------------------------------------------------------------------
+add_library(sensorforge_scenario STATIC
+  scenario/scenario.cpp
+  scenario/assertion.cpp
+)
+target_include_directories(sensorforge_scenario PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(sensorforge_scenario PUBLIC yaml-cpp)
+target_compile_features(sensorforge_scenario PUBLIC cxx_std_20)
+set_property(TARGET sensorforge_scenario PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+add_executable(scenario_runner
+  scenario/scenario_runner.cpp
+  scenario/scenario_main.cpp
+)
+target_include_directories(scenario_runner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(scenario_runner PUBLIC
+  rclcpp::rclcpp
+  ${sensor_msgs_TARGETS}
+  sensorforge_scenario
+)
+
+install(TARGETS scenario_runner DESTINATION lib/${PROJECT_NAME})
+install(DIRECTORY scenario/scenarios DESTINATION share/${PROJECT_NAME}/scenarios)
 
 pluginlib_export_plugin_description_file(network_bridge network_interface_plugins.xml)
 

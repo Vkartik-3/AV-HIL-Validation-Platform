@@ -34,6 +34,7 @@ inline std::atomic<long long> g_assertions{0};
 #define SF_EXPECT_GT(a, b)   do {SF_TICK; EXPECT_GT(a, b);} while (0)
 #define SF_EXPECT_GE(a, b)   do {SF_TICK; EXPECT_GE(a, b);} while (0)
 #define SF_EXPECT_LT(a, b)   do {SF_TICK; EXPECT_LT(a, b);} while (0)
+#define SF_EXPECT_NEAR(a, b, eps) do {SF_TICK; EXPECT_NEAR(a, b, eps);} while (0)
 // ASSERT_* still abort the current (void) test on failure via `return`; wrapping
 // in do/while(0) preserves that because the return exits the enclosing function.
 #define SF_ASSERT_EQ(a, b)   do {SF_TICK; ASSERT_EQ(a, b);} while (0)

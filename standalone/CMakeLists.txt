@@ -38,7 +38,14 @@ target_compile_features(sensorforge_protocol PUBLIC cxx_std_20)
 
 if(SENSORFORGE_BUILD_TESTS)
   find_package(GTest REQUIRED)
+  find_package(yaml-cpp REQUIRED)
   enable_testing()
+  # Non-ROS scenario library (parser + assertions) for the scenario tests.
+  add_library(sensorforge_scenario STATIC
+    ${SF_ROOT}/scenario/scenario.cpp
+    ${SF_ROOT}/scenario/assertion.cpp)
+  target_include_directories(sensorforge_scenario PUBLIC ${SF_ROOT})
+  target_link_libraries(sensorforge_scenario PUBLIC yaml-cpp)
   add_executable(sensorforge_unit_tests
     ${SF_ROOT}/test/unit/test_main.cpp
     ${SF_ROOT}/test/unit/test_crc32c.cpp
@@ -48,10 +55,12 @@ if(SENSORFORGE_BUILD_TESTS)
     ${SF_ROOT}/test/unit/test_wal.cpp
     ${SF_ROOT}/test/unit/test_backpressure.cpp
     ${SF_ROOT}/test/unit/test_tcp_reassembler.cpp
+    ${SF_ROOT}/test/unit/test_scenario.cpp
   )
-  target_include_directories(sensorforge_unit_tests PRIVATE ${SF_ROOT}/test/unit)
+  target_include_directories(sensorforge_unit_tests PRIVATE ${SF_ROOT}/test/unit ${SF_ROOT})
   target_link_libraries(sensorforge_unit_tests
-    sensorforge_protocol GTest::gtest GTest::gtest_main Threads::Threads)
+    sensorforge_protocol sensorforge_scenario
+    GTest::gtest GTest::gtest_main Threads::Threads)
   add_test(NAME unit COMMAND sensorforge_unit_tests)
 endif()
 
@@ -87,4 +96,14 @@ if(SENSORFORGE_BUILD_FUZZ)
   sf_add_fuzzer(fuzz_frame_parser ${SF_ROOT}/src/protocol/frame_codec.cpp)
   sf_add_fuzzer(fuzz_tcp_reassembly)
   sf_add_fuzzer(fuzz_replay_reader)
+  # YAML scenario parser fuzzer (needs yaml-cpp).
+  find_package(yaml-cpp QUIET)
+  if(yaml-cpp_FOUND OR TARGET yaml-cpp)
+    add_executable(fuzz_yaml_scenario
+      ${SF_ROOT}/fuzz/fuzz_yaml_scenario.cpp ${SF_ROOT}/scenario/scenario.cpp)
+    target_include_directories(fuzz_yaml_scenario PRIVATE ${SF_ROOT})
+    target_compile_options(fuzz_yaml_scenario PRIVATE ${SF_FUZZ_FLAGS})
+    target_link_options(fuzz_yaml_scenario PRIVATE ${SF_FUZZ_FLAGS})
+    target_link_libraries(fuzz_yaml_scenario yaml-cpp)
+  endif()
 endif()

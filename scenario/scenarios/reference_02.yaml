@@ -1,0 +1,25 @@
+# Reference scenario 02 - CAN dropout.
+# A 2 s burst-loss window drops CAN frames; we assert CAN recovers and the
+# other safety-critical streams are unaffected.
+name: can_dropout_recovery
+duration_seconds: 20
+streams:
+  imu: {rate_hz: 200}
+  gps: {rate_hz: 20}
+  can: {rate_hz: 100}
+faults:
+  - stream: can
+    start_seconds: 6
+    duration_seconds: 2
+    type: burst
+    params: {burst_ms: 2000}
+assertions:
+  - metric: can_drop_rate_pct
+    operator: greater_than
+    value: 0
+  - metric: imu_drop_rate_pct
+    operator: less_than
+    value: 1.0
+  - metric: gps_sequence_gaps
+    operator: equals
+    value: 0
