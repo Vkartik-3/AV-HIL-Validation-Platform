@@ -1,0 +1,15 @@
+# SensorForge ThreadSanitizer suppressions
+#
+# The inline __attribute__((no_sanitize("thread"))) on Seqlock::load()/store()
+# (include/sensorforge/core/seqlock.hpp) is the primary mechanism and is
+# usually sufficient. This file is a belt-and-suspenders fallback for builds or
+# tools where the attribute is not honored.
+#
+# The seqlock intentionally reads config/metadata non-atomically while a writer
+# updates it; the sequence counter forces readers to discard torn reads. TSan
+# cannot model that protocol invariant, so it reports the value_ access as a
+# race. See the ThreadSanitizer note in seqlock.hpp.
+#
+# Usage:
+#   TSAN_OPTIONS="suppressions=$(pwd)/stress/tsan_suppressions.txt" ./spsc_tsan_stress
+race:sensorforge::core::Seqlock

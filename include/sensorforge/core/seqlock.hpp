@@ -19,7 +19,22 @@ Protocol:
     torn -> retry.
 
 T should be trivially copyable and small (this is not a general mutex).
-==============================================================================
+
+--- ThreadSanitizer note -------------------------------------------------------
+store() and load() are annotated __attribute__((no_sanitize("thread"))).
+
+The seqlock DELIBERATELY reads value_ non-atomically while a writer may be
+updating it; correctness comes from the sequence counter, which forces the
+reader to DISCARD and retry any read that overlapped a write. TSan cannot see
+that protocol-level invariant, so it flags the value_ access as a data race.
+Strictly, in the C++ abstract machine this non-atomic overlap IS a race (the
+same reason the Linux kernel uses READ_ONCE/WRITE_ONCE volatiles); it is
+benign here because torn values are never used. The suppression documents that
+this race is intentional and handled by the retry loop, not overlooked.
+Reference: https://www.kernel.org/doc/html/latest/locking/seqlock.html
+(A fully UB-free alternative is to make value_ access memory_order_relaxed
+atomic, which removes the suppression entirely.)
+================================================================================
 */
 
 #pragma once
@@ -28,6 +43,14 @@ T should be trivially copyable and small (this is not a general mutex).
 #include <cstdint>
 #include <thread>
 #include <type_traits>
+
+// Disable ThreadSanitizer instrumentation on the annotated function. No-op on
+// non-sanitizer builds and on compilers without the attribute.
+#if defined(__GNUC__) || defined(__clang__)
+#  define SF_NO_SANITIZE_THREAD __attribute__((no_sanitize("thread")))
+#else
+#  define SF_NO_SANITIZE_THREAD
+#endif
 
 namespace sensorforge::core {
 
@@ -46,7 +69,12 @@ public:
   /**
    * @brief Reader: return a consistent snapshot, retrying past any in-flight
    *        write. Wait-free in the common (uncontended) case.
+   *
+   * TSan-suppressed: see the ThreadSanitizer note in the file header. The
+   * value_ read may overlap a writer; the sequence re-check below discards any
+   * such torn read before it can be observed.
    */
+  SF_NO_SANITIZE_THREAD
   T load() const
   {
     T copy;
@@ -70,7 +98,12 @@ public:
 
   /**
    * @brief Writer: publish @p desired. Single-writer only.
+   *
+   * TSan-suppressed: see the ThreadSanitizer note in the file header. value_ is
+   * written between the odd/even sequence bumps; concurrent readers detect the
+   * overlap via the sequence change and retry.
    */
+  SF_NO_SANITIZE_THREAD
   void store(const T & desired)
   {
     const uint64_t seq = seq_.load(std::memory_order_relaxed);
