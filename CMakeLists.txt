@@ -22,6 +22,9 @@ find_package(yaml-cpp REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(ZSTD REQUIRED libzstd)
+# io_uring is optional (Extension E). When present, the io_uring transport
+# plugin is built; otherwise it is skipped and UDP/TCP remain available.
+pkg_check_modules(LIBURING liburing)
 
 if(BUILD_TESTING)
   find_package(launch_testing_ament_cmake REQUIRED)
@@ -172,6 +175,33 @@ target_link_libraries(tcp_interface PUBLIC
   rclcpp::rclcpp
   ${Boost_LIBRARIES}
 )
+
+# io_uring transport plugin (Extension E), Linux + liburing only.
+if(LIBURING_FOUND)
+  add_library(iouring_interface SHARED
+    src/network_interfaces/iouring_interface.cpp
+  )
+  target_compile_definitions(iouring_interface PRIVATE SENSORFORGE_HAVE_LIBURING)
+  target_include_directories(iouring_interface PRIVATE ${LIBURING_INCLUDE_DIRS})
+  target_link_libraries(iouring_interface PUBLIC
+    pluginlib::pluginlib
+    rclcpp::rclcpp
+    ${LIBURING_LIBRARIES}
+  )
+  install(TARGETS iouring_interface DESTINATION lib/)
+
+  # io_uring vs Asio UDP benchmark.
+  add_executable(bench_udp_transport transport/bench_udp_transport.cpp)
+  target_compile_definitions(bench_udp_transport PRIVATE SENSORFORGE_HAVE_LIBURING)
+  target_include_directories(bench_udp_transport PRIVATE ${LIBURING_INCLUDE_DIRS})
+  target_link_libraries(bench_udp_transport PUBLIC
+    ${Boost_LIBRARIES} ${LIBURING_LIBRARIES})
+  install(TARGETS bench_udp_transport DESTINATION lib/${PROJECT_NAME})
+
+  message(STATUS "SensorForge: io_uring transport plugin ENABLED")
+else()
+  message(STATUS "SensorForge: liburing not found; io_uring transport plugin skipped")
+endif()
 
 # ---------------------------------------------------------------------------
 # Synthetic AV sensor publishers (Extension I). Each is a standalone ROS2 node.

@@ -136,7 +136,7 @@ jobs:
       - name: Install package deps
         run: |
           apt-get update && apt-get install -y \
-            libzstd-dev libboost-system-dev libyaml-cpp-dev pkg-config \
+            libzstd-dev libboost-system-dev libyaml-cpp-dev liburing-dev pkg-config \
             python3-colcon-common-extensions
       - name: colcon build
         shell: bash

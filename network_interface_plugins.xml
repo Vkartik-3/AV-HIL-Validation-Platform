@@ -14,4 +14,14 @@
             </description>
         </class>
     </library>
+
+    <library path="iouring_interface">
+        <class name="network_bridge::IoUringInterface" type="network_bridge::IoUringInterface" base_class_type="network_bridge::NetworkInterface">
+            <description>
+                A Linux io_uring UDP network interface (Extension E). Built only
+                when liburing is available; registered buffers + batched
+                sendmsg/recvmsg as an alternative to the Boost.Asio UDP backend.
+            </description>
+        </class>
+    </library>
 </class_libraries>
