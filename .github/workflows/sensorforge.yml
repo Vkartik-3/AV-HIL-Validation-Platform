@@ -1,0 +1,143 @@
+name: SensorForge CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# The SensorForge core (protocol / replay / ring / seqlock / reassembler) is
+# ROS-free, so its tests, sanitizers, fuzzers and benchmarks run on plain Ubuntu
+# via standalone/CMakeLists.txt. A separate job builds the ROS2 bridge itself.
+jobs:
+  # 1. Debug build + full GoogleTest suite; assert >= 5,000 executed assertions.
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y cmake g++ libgtest-dev
+      - name: Configure + build (Debug)
+        run: |
+          cmake -S standalone -B build -DCMAKE_BUILD_TYPE=Debug \
+            -DSENSORFORGE_BUILD_TESTS=ON -DSENSORFORGE_BUILD_STRESS=ON
+          cmake --build build -j
+      - name: Run tests + check assertion count
+        run: |
+          ./build/sensorforge_unit_tests | tee out.txt
+          total=$(grep -oE '\[ASSERTIONS\] total=[0-9]+' out.txt | grep -oE '[0-9]+')
+          echo "Executed assertions: $total"
+          test "$total" -ge 5000 || { echo "FAIL: fewer than 5000 assertions"; exit 1; }
+          grep -q '\[  FAILED  \]' out.txt && { echo "FAIL: a test failed"; exit 1; } || true
+
+  # 2. AddressSanitizer + UndefinedBehaviorSanitizer over the whole suite.
+  asan-ubsan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y cmake g++ libgtest-dev
+      - name: Build with ASan+UBSan
+        run: |
+          cmake -S standalone -B build -DCMAKE_BUILD_TYPE=Debug \
+            -DSENSORFORGE_BUILD_TESTS=ON \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=undefined -g -O1"
+          cmake --build build -j
+      - name: Run under sanitizers
+        env:
+          ASAN_OPTIONS: detect_container_overflow=0:halt_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: ./build/sensorforge_unit_tests
+
+  # 3. ThreadSanitizer over the SPSC ring + seqlock stress test.
+  tsan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y cmake g++
+      - name: Build stress with TSan
+        run: |
+          cmake -S standalone -B build -DSENSORFORGE_BUILD_TESTS=OFF \
+            -DSENSORFORGE_BUILD_STRESS=ON \
+            -DCMAKE_CXX_FLAGS="-fsanitize=thread -g -O1"
+          cmake --build build -j
+      - name: Run stress under TSan (must be race-free)
+        env:
+          SENSORFORGE_STRESS_SECONDS: "30"
+          TSAN_OPTIONS: halt_on_error=1
+        run: |
+          ./build/spsc_tsan_stress | tee tsan.txt
+          grep -q 'ThreadSanitizer' tsan.txt && { echo "FAIL: data race"; exit 1; } || true
+          grep -q 'PASS: no corruption' tsan.txt || { echo "FAIL: corruption"; exit 1; }
+
+  # 4. libFuzzer smoke: each harness must survive 1000 iterations clean.
+  fuzz-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y cmake clang
+      - name: Build fuzz targets (Clang)
+        run: |
+          cmake -S standalone -B build -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ -DSENSORFORGE_BUILD_TESTS=OFF \
+            -DSENSORFORGE_BUILD_STRESS=OFF -DSENSORFORGE_BUILD_FUZZ=ON
+          cmake --build build -j
+      - name: Smoke-run each fuzzer (1000 iterations)
+        run: |
+          ./build/fuzz_frame_parser   -runs=1000
+          ./build/fuzz_tcp_reassembly -runs=1000
+          ./build/fuzz_replay_reader  -runs=1000
+
+  # 5. Release build + Google Benchmark; upload results as an artifact.
+  #    (Baseline regression gates land in Phase 4 / Extension P.)
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y cmake g++ libbenchmark-dev
+      - name: Build + run benchmarks (Release)
+        run: |
+          cmake -S standalone -B build -DCMAKE_BUILD_TYPE=Release \
+            -DSENSORFORGE_BUILD_TESTS=OFF -DSENSORFORGE_BUILD_BENCH=ON
+          cmake --build build -j
+          ./build/sensorforge_bench --benchmark_repetitions=3 \
+            --benchmark_format=console | tee benchmark_results.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark_results.txt
+
+  # 6. Plain non-ROS CMake configure/build of the core (no tests/deps).
+  cmake-plain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y cmake g++
+      - name: Configure + build core only
+        run: |
+          cmake -S standalone -B build -DSENSORFORGE_BUILD_TESTS=OFF \
+            -DSENSORFORGE_BUILD_STRESS=OFF
+          cmake --build build -j
+
+  # 7. ROS2 bridge integration build (validates the ament/colcon package).
+  #    Headless scenario-regression tests are added in Phase 3 (Extension J/P).
+  ros-humble:
+    runs-on: ubuntu-latest
+    container: ros:humble-ros-base
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: src/network_bridge
+      - name: Install package deps
+        run: |
+          apt-get update && apt-get install -y libzstd-dev python3-colcon-common-extensions
+      - name: colcon build
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon build --packages-select network_bridge \
+            --cmake-args -DCMAKE_BUILD_TYPE=Release
