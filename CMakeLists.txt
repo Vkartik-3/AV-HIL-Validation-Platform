@@ -17,6 +17,7 @@ find_package(std_msgs REQUIRED)
 find_package(tf2_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(pluginlib REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(ZSTD REQUIRED libzstd)
@@ -155,6 +156,23 @@ target_link_libraries(tcp_interface PUBLIC
   pluginlib::pluginlib
   rclcpp::rclcpp
   ${Boost_LIBRARIES}
+)
+
+# ---------------------------------------------------------------------------
+# Synthetic AV sensor publishers (Extension I). Each is a standalone ROS2 node.
+# ---------------------------------------------------------------------------
+foreach(sensor lidar camera imu gps can)
+  add_executable(${sensor}_publisher sensors/${sensor}_publisher.cpp)
+  target_include_directories(${sensor}_publisher PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/sensors)
+  target_link_libraries(${sensor}_publisher PUBLIC
+    rclcpp::rclcpp
+    ${sensor_msgs_TARGETS})
+endforeach()
+
+install(TARGETS
+  lidar_publisher camera_publisher imu_publisher gps_publisher can_publisher
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 pluginlib_export_plugin_description_file(network_bridge network_interface_plugins.xml)
