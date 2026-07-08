@@ -71,6 +71,13 @@ inline bool has_sse42()
   return supported;
 }
 
+// The target attribute lets this function use SSE4.2 intrinsics even when the
+// translation unit is compiled WITHOUT -msse4.2 (the default colcon build).
+// Without it, GCC/Clang reject `_mm_crc32_u64` with "target specific option
+// mismatch". Runtime dispatch via has_sse42() still gates whether we call it.
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((target("sse4.2")))
+#endif
 inline uint32_t crc32c_hw(uint32_t crc, const uint8_t * data, size_t len)
 {
   size_t i = 0;
@@ -87,6 +94,9 @@ inline uint32_t crc32c_hw(uint32_t crc, const uint8_t * data, size_t len)
 #endif
 
 #if defined(SENSORFORGE_ARM_CRC)
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((target("+crc")))
+#endif
 inline uint32_t crc32c_hw(uint32_t crc, const uint8_t * data, size_t len)
 {
   size_t i = 0;
