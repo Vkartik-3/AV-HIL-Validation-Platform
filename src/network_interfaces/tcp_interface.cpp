@@ -119,7 +119,9 @@ void TcpInterface::receive_thread()
 {
   uint8_t state = 0;
   uint8_t start1, start2;
-  uint32_t payload_size;
+  uint32_t payload_size = 0;  // -Wmaybe-uninitialized: the state machine only
+                              // reads this after case 2 sets it, but initialize
+                              // defensively so a corrupt state can't read junk.
   std::vector<uint8_t> payload;
   while (!stream_.is_shutdown() && rclcpp::ok()) {
     switch (state) {

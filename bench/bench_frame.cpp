@@ -33,8 +33,10 @@ void BM_FrameEncode(benchmark::State & state)
   const auto payload = make_payload(static_cast<size_t>(state.range(0)));
   uint64_t seq = 0;
   for (auto _ : state) {
+    // Separate statement: passing `seq++, seq` as two args is unsequenced (UB).
+    const uint64_t s = seq++;
     auto frame = encode_frame(
-      SensorType::kLidar, seq++, seq, kFlagNone, payload.data(), payload.size());
+      SensorType::kLidar, s, s, kFlagNone, payload.data(), payload.size());
     benchmark::DoNotOptimize(frame.data());
   }
   state.SetItemsProcessed(state.iterations());
@@ -83,10 +85,11 @@ void bench_frame_latency()
 
     uint64_t seq = 0;
     auto enc_stats = measure([&]() {
+      const uint64_t s = seq++;
       auto f = encode_frame(
-        SensorType::kLidar, seq++, seq, kFlagNone, payload.data(), payload.size());
-      volatile auto s = f.size();
-      (void)s;
+        SensorType::kLidar, s, s, kFlagNone, payload.data(), payload.size());
+      volatile auto sz = f.size();
+      (void)sz;
     }, iters);
     std::string enc_name = std::string("frame_encode_") + size_suffix(n);
     report(enc_name.c_str(), enc_stats);
