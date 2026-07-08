@@ -27,15 +27,34 @@ if(BUILD_TESTING)
   set(ament_cmake_copyright_FOUND TRUE)
   set(ament_cmake_cpplint_FOUND TRUE)
   set(ament_cmake_flake8_FOUND TRUE)
+
+  # The SensorForge subsystem (protocol/core, benchmarks, stress, fuzz) follows
+  # its own clang-format style and is linted in the dedicated SensorForge CI
+  # workflow, not the upstream ROS ament uncrustify profile. Exclude uncrustify
+  # from the auto-run, then invoke it manually on the original ROS sources so
+  # those (including our edits to them) stay style-gated.
+  list(APPEND AMENT_LINT_AUTO_EXCLUDE ament_cmake_uncrustify)
   ament_lint_auto_find_test_dependencies()
 
+  find_package(ament_cmake_uncrustify REQUIRED)
+  ament_uncrustify(
+    EXCLUDE
+      bench
+      stress
+      include/sensorforge
+      src/protocol
+  )
+
+  # NOTE: the internal launch tests wait up to 10s (spin_until_future_complete)
+  # for a round trip; the old 2s CMake TIMEOUT killed the first-run test during
+  # cold DDS discovery (order-dependent flake). Give discovery adequate room.
   add_launch_test(
     test/test_udp.py
-    TIMEOUT 2  # Sets a timeout for the test in seconds
+    TIMEOUT 60  # Sets a timeout for the test in seconds
   )
   add_launch_test(
     test/test_tcp.py
-    TIMEOUT 2  # Sets a timeout for the test in seconds
+    TIMEOUT 60  # Sets a timeout for the test in seconds
   )
 endif()
 
