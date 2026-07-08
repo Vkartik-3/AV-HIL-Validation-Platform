@@ -46,6 +46,10 @@ if(SENSORFORGE_BUILD_TESTS)
     ${SF_ROOT}/scenario/assertion.cpp)
   target_include_directories(sensorforge_scenario PUBLIC ${SF_ROOT})
   target_link_libraries(sensorforge_scenario PUBLIC yaml-cpp)
+  # Fault engine (non-ROS).
+  add_library(sensorforge_faults STATIC ${SF_ROOT}/faults/fault_engine.cpp)
+  target_include_directories(sensorforge_faults PUBLIC ${SF_ROOT})
+  target_link_libraries(sensorforge_faults PUBLIC Threads::Threads)
   add_executable(sensorforge_unit_tests
     ${SF_ROOT}/test/unit/test_main.cpp
     ${SF_ROOT}/test/unit/test_crc32c.cpp
@@ -56,10 +60,11 @@ if(SENSORFORGE_BUILD_TESTS)
     ${SF_ROOT}/test/unit/test_backpressure.cpp
     ${SF_ROOT}/test/unit/test_tcp_reassembler.cpp
     ${SF_ROOT}/test/unit/test_scenario.cpp
+    ${SF_ROOT}/test/unit/test_fault_injection.cpp
   )
   target_include_directories(sensorforge_unit_tests PRIVATE ${SF_ROOT}/test/unit ${SF_ROOT})
   target_link_libraries(sensorforge_unit_tests
-    sensorforge_protocol sensorforge_scenario
+    sensorforge_protocol sensorforge_scenario sensorforge_faults
     GTest::gtest GTest::gtest_main Threads::Threads)
   add_test(NAME unit COMMAND sensorforge_unit_tests)
 endif()

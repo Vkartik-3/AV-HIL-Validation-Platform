@@ -67,6 +67,11 @@ void NetworkBridge::shutdown()
   timers_.clear();
   publishers_.clear();
 
+  if (fault_engine_) {
+    fault_engine_->flush();
+    fault_engine_.reset();
+  }
+
   if (wal_writer_) {
     wal_writer_->close();
     wal_writer_.reset();
@@ -100,6 +105,31 @@ void NetworkBridge::load_parameters()
     wal_writer_ = std::make_unique<sensorforge::replay::WalWriter>(wal_record_dir);
     RCLCPP_INFO(
       this->get_logger(), "Recording WAL replay log to %s", wal_record_dir.c_str());
+  }
+
+  // Optional transport-layer fault injection (Extension K). A single
+  // param-configured rule; scenarios with multiple faults drive the scenario
+  // runner instead. fault_type = none (default) disables injection.
+  std::string fault_type;
+  this->declare_parameter("fault_type", "none");
+  this->get_parameter("fault_type", fault_type);
+  if (fault_type != "none" && !fault_type.empty()) {
+    namespace fx = sensorforge::faults;
+    fx::FaultRule rule;
+    rule.kind = fx::fault_kind_from_string(fault_type);
+    rule.start_s = this->declare_parameter<double>("fault_start_s", 0.0);
+    rule.duration_s = this->declare_parameter<double>("fault_duration_s", 1e9);
+    rule.delay_ms = this->declare_parameter<double>("fault_delay_ms", 0.0);
+    rule.drop_rate = this->declare_parameter<double>("fault_drop_rate", 0.0);
+    rule.bandwidth_kbps = this->declare_parameter<double>("fault_bandwidth_kbps", 0.0);
+    if (rule.kind != fx::FaultKind::kNone) {
+      fault_engine_ = std::make_unique<fx::FaultEngine>(
+        [this](const std::vector<uint8_t> & bytes) {
+          if (network_interface_) {network_interface_->write(bytes);}
+        });
+      fault_engine_->add_rule(rule);
+      RCLCPP_INFO(this->get_logger(), "Transport fault injection enabled: %s", fault_type.c_str());
+    }
   }
 
   this->declare_parameter("publish_namespace", "");
@@ -446,8 +476,16 @@ void NetworkBridge::send_data(std::shared_ptr<SubscriptionManager> manager)
       compressed_data.data(), compressed_data.size());
   }
 
-  // Send framed data
-  network_interface_->write(frame);
+  // Send framed data. When transport fault injection is enabled, route through
+  // the fault engine (single call site); it decides drop/delay/corrupt/etc and
+  // performs the actual network write via its callback.
+  if (fault_engine_) {
+    const double t_s = std::chrono::duration<double>(
+      std::chrono::steady_clock::now() - node_start_).count();
+    fault_engine_->process(frame, t_s, topic);
+  } else {
+    network_interface_->write(frame);
+  }
   auto end = std::chrono::system_clock::now();
   RCLCPP_DEBUG(
     this->get_logger(),

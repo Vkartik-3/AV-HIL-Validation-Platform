@@ -9,6 +9,7 @@ Part of the SensorForge AV HIL validation platform.
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/imu.hpp>
@@ -29,6 +30,20 @@ namespace {
 std::string publisher_executable(const std::string & stream)
 {
   return stream + "_publisher";
+}
+
+// Map a parsed scenario fault to a fault-engine rule.
+faults::FaultRule to_fault_rule(const FaultSpec & f)
+{
+  faults::FaultRule r;
+  r.kind = faults::fault_kind_from_string(to_string(f.type));
+  r.stream = f.stream;
+  r.start_s = f.start_seconds;
+  r.duration_s = f.duration_seconds;
+  r.delay_ms = f.param("delay_ms");
+  r.drop_rate = f.param("drop_rate");
+  r.bandwidth_kbps = f.param("bandwidth_kbps");
+  return r;
 }
 }  // namespace
 
@@ -59,6 +74,30 @@ void ScenarioRunner::start()
   for (const auto & s : scenario_.streams) {
     metrics_.push_back(std::make_unique<StreamMetrics>(
         s.name, s.rate_hz, scenario_.duration_seconds));
+
+    // Build a fault engine for this stream if any fault targets it. Its write
+    // callback records the (possibly delayed/duplicated) arrival's latency.
+    const std::string stream = s.name;
+    bool has_fault = false;
+    for (const auto & f : scenario_.faults) {
+      if (f.stream == stream) {has_fault = true;}
+    }
+    if (has_fault) {
+      auto * sm = metrics_.back().get();
+      auto engine = std::make_unique<faults::FaultEngine>(
+        [sm](const std::vector<uint8_t> & buf) {
+          if (buf.size() >= sizeof(double)) {
+            double latency_ms = 0.0;
+            std::memcpy(&latency_ms, buf.data(), sizeof(double));
+            sm->record(latency_ms);
+          }
+        });
+      for (const auto & f : scenario_.faults) {
+        if (f.stream == stream) {engine->add_rule(to_fault_rule(f));}
+      }
+      stream_faults_.emplace(stream, std::move(engine));
+    }
+
     subscribe_stream(s);
     spawn_publisher(s);
   }
@@ -98,14 +137,31 @@ void ScenarioRunner::spawn_publisher(const StreamConfig & s)
 #endif
 }
 
+StreamMetrics * ScenarioRunner::metrics_for(const std::string & stream)
+{
+  for (auto & m : metrics_) {
+    if (m->name() == stream) {
+      return m.get();
+    }
+  }
+  return nullptr;
+}
+
 void ScenarioRunner::record(const std::string & stream, const rclcpp::Time & stamp)
 {
   const double latency_ms = (this->now() - stamp).seconds() * 1000.0;
-  for (auto & m : metrics_) {
-    if (m->name() == stream) {
-      m->record(latency_ms);
-      return;
-    }
+  const auto it = stream_faults_.find(stream);
+  if (it != stream_faults_.end()) {
+    // Route the arrival through the fault engine (drop/delay/duplicate/...);
+    // the engine's callback records the surviving arrivals.
+    const double t_s = (this->now() - start_time_).seconds();
+    std::vector<uint8_t> buf(sizeof(double));
+    std::memcpy(buf.data(), &latency_ms, sizeof(double));
+    it->second->process(buf, t_s, stream);
+    return;
+  }
+  if (auto * sm = metrics_for(stream)) {
+    sm->record(latency_ms);
   }
 }
 
@@ -161,6 +217,12 @@ ScenarioResult ScenarioRunner::finish()
   }
   child_pids_.clear();
 #endif
+
+  // Release any frames still held by fault-engine delay queues.
+  for (auto & [stream, engine] : stream_faults_) {
+    (void)stream;
+    engine->flush();
+  }
 
   MetricMap metrics;
   for (const auto & m : metrics_) {

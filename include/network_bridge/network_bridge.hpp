@@ -31,12 +31,14 @@ SOFTWARE.
 #include <memory>
 #include <map>
 #include <cstdint>
+#include <chrono>
 #include <rclcpp/rclcpp.hpp>
 
 #include "network_bridge/subscription_manager.hpp"
 #include "network_interfaces/network_interface_base.hpp"
 #include "sensorforge/protocol/frame_codec.hpp"
 #include "sensorforge/replay/wal_writer.hpp"
+#include "faults/fault_engine.hpp"
 
 /**
  * @class NetworkBridge
@@ -227,4 +229,15 @@ protected:
    *        so the session can be deterministically replayed later.
    */
   std::unique_ptr<sensorforge::replay::WalWriter> wal_writer_;
+
+  /**
+   * @brief Optional transport-layer fault injector (Extension K). When a
+   *        `fault_type` parameter is set, outgoing frames are routed through it
+   *        at the single write() call site so faults are injected at the
+   *        transport layer, not the application.
+   */
+  std::unique_ptr<sensorforge::faults::FaultEngine> fault_engine_;
+
+  /// Node start time, used to compute scenario-relative fault windows.
+  std::chrono::steady_clock::time_point node_start_ = std::chrono::steady_clock::now();
 };

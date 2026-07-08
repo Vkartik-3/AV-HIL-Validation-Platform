@@ -61,13 +61,15 @@ if(BUILD_TESTING)
     test/unit/test_backpressure.cpp
     test/unit/test_tcp_reassembler.cpp
     test/unit/test_scenario.cpp
+    test/unit/test_fault_injection.cpp
   )
   if(TARGET sensorforge_unit_tests)
     target_include_directories(sensorforge_unit_tests PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/test/unit
       ${CMAKE_CURRENT_SOURCE_DIR}
       ${CMAKE_CURRENT_SOURCE_DIR}/include)
-    target_link_libraries(sensorforge_unit_tests sensorforge_protocol sensorforge_scenario)
+    target_link_libraries(sensorforge_unit_tests
+      sensorforge_protocol sensorforge_scenario sensorforge_faults)
   endif()
 
   # NOTE: the internal launch tests wait up to 10s (spin_until_future_complete)
@@ -96,6 +98,15 @@ add_library(sensorforge_protocol STATIC
   src/replay/wal_writer.cpp
   src/replay/wal_reader.cpp
 )
+
+# Fault injection engine (Extension K), ROS-free.
+add_library(sensorforge_faults STATIC
+  faults/fault_engine.cpp
+)
+target_include_directories(sensorforge_faults PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+target_compile_features(sensorforge_faults PUBLIC cxx_std_20)
+set_property(TARGET sensorforge_faults PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_include_directories(sensorforge_protocol PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
@@ -147,6 +158,7 @@ target_link_libraries(network_bridge PUBLIC
   tf2_ros::tf2_ros
   ${ZSTD_LIBRARIES}
   sensorforge_protocol
+  sensorforge_faults
 )
 
 target_link_libraries(udp_interface PUBLIC
@@ -199,6 +211,7 @@ target_link_libraries(scenario_runner PUBLIC
   rclcpp::rclcpp
   ${sensor_msgs_TARGETS}
   sensorforge_scenario
+  sensorforge_faults
 )
 
 install(TARGETS scenario_runner DESTINATION lib/${PROJECT_NAME})
