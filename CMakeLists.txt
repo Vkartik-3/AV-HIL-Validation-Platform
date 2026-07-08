@@ -41,6 +41,28 @@ endif()
 
 include_directories(include)
 
+# ---------------------------------------------------------------------------
+# SensorForge core/protocol library (no ROS2 dependency).
+# Kept deliberately free of rclcpp/Boost so it can also be built by the plain
+# CMake CI job, the Google Benchmark harness, the GoogleTest suite and the
+# libFuzzer targets without a ROS2 environment.
+# ---------------------------------------------------------------------------
+add_library(sensorforge_protocol STATIC
+  src/protocol/frame_codec.cpp
+)
+target_include_directories(sensorforge_protocol PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
+target_compile_features(sensorforge_protocol PUBLIC cxx_std_20)
+set_property(TARGET sensorforge_protocol PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+# Optional: build the Google Benchmark harness (bench/). Off by default so the
+# standard ament/colcon build does not require the benchmark package.
+option(SENSORFORGE_BUILD_BENCH "Build the SensorForge Google Benchmark harness" OFF)
+if(SENSORFORGE_BUILD_BENCH)
+  add_subdirectory(bench)
+endif()
+
 add_executable(network_bridge
     src/network_bridge.cpp
     src/subscription_manager.cpp
@@ -62,6 +84,7 @@ target_link_libraries(network_bridge PUBLIC
   rclcpp::rclcpp
   tf2_ros::tf2_ros
   ${ZSTD_LIBRARIES}
+  sensorforge_protocol
 )
 
 target_link_libraries(udp_interface PUBLIC

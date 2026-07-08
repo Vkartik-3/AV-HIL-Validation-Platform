@@ -30,10 +30,12 @@ SOFTWARE.
 #include <string>
 #include <memory>
 #include <map>
+#include <cstdint>
 #include <rclcpp/rclcpp.hpp>
 
 #include "network_bridge/subscription_manager.hpp"
 #include "network_interfaces/network_interface_base.hpp"
+#include "sensorforge/protocol/frame_codec.hpp"
 
 /**
  * @class NetworkBridge
@@ -100,26 +102,28 @@ protected:
 
   void check_network_health();
   /**
-   * @brief Creates a header for the message.
+   * @brief Creates the inner (per-message) header carried inside a frame payload.
+   *
+   * Layout: topic '\0' msg_type '\0'. The wall-clock timestamp that used to
+   * live here now lives in the SensorForge frame header (timestamp_ns), so it
+   * is no longer part of the inner header.
    *
    * @param topic The topic of the message.
    * @param msg_type The type of the message.
-   * @param header The header to be created.
    */
   virtual std::vector<uint8_t> create_header(
     const std::string & topic, const std::string & msg_type);
 
   /**
-   * @brief Parses the header of the message.
+   * @brief Parses the inner header (topic '\0' msg_type '\0') of a message.
    *
-   * @param header The header to be parsed.
-   * @param topic The topic of the message.
-   * @param msg_type The type of the message.
-   * @param time The time the message was sent.
+   * @param header The decompressed inner payload to parse.
+   * @param topic [out] The topic of the message.
+   * @param msg_type [out] The type of the message.
    */
   virtual void parse_header(
     const std::vector<uint8_t> & header, std::string & topic,
-    std::string & msg_type, double & time);
+    std::string & msg_type);
 
   /**
    * Compresses the given data using Zstandard compression algorithm.
@@ -194,4 +198,25 @@ protected:
    * @brief the namespace for the publishers.
    */
   std::string publish_namespace_;
+
+  /**
+   * @brief Monotonic per-link frame sequence counter (transmit side).
+   *
+   * The bridge multiplexes many ROS2 topics over a single transport link, so
+   * the "stream" for framing purposes is the link itself: one monotonically
+   * increasing sequence per NetworkBridge instance. (Dedicated sensor
+   * publishers in the HIL layer each own their own per-sensor sequence.)
+   */
+  uint64_t tx_sequence_ = 0;
+
+  /**
+   * @brief Stateful frame decoder enforcing monotonic sequence/timestamp on
+   *        the single inbound link (stream key 0).
+   */
+  sensorforge::protocol::FrameDecoder frame_decoder_;
+
+  /// Count of frames rejected by validation (bad magic/version/CRC/etc).
+  uint64_t frame_reject_count_ = 0;
+  /// Subset of rejects attributable to a CRC mismatch (header or payload).
+  uint64_t crc_failure_count_ = 0;
 };

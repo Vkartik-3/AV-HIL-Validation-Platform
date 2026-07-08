@@ -259,39 +259,71 @@ void NetworkBridge::receive_data(std::span<const uint8_t> data)
 
   auto now = std::chrono::system_clock::now();
 
-  // Decompress data
+  // 1. Validate the SensorForge frame before touching the payload. This
+  //    enforces magic/version/header_size/bounds/CRC and per-link monotonic
+  //    sequence & timestamp (stream key 0 = the single inbound link).
+  namespace sfp = sensorforge::protocol;
+  sfp::FrameHeader fh;
+  const sfp::FrameError err =
+    frame_decoder_.decode(data.data(), data.size(), /*stream_key=*/0, fh);
+  if (err != sfp::FrameError::kOk) {
+    ++frame_reject_count_;
+    if (err == sfp::FrameError::kHeaderCrcMismatch ||
+      err == sfp::FrameError::kPayloadCrcMismatch)
+    {
+      ++crc_failure_count_;
+    }
+    RCLCPP_WARN(
+      this->get_logger(),
+      "Rejected frame: %s (rejects=%llu, crc_failures=%llu)",
+      std::string(sfp::to_string(err)).c_str(),
+      static_cast<unsigned long long>(frame_reject_count_),
+      static_cast<unsigned long long>(crc_failure_count_));
+    return;
+  }
+
+  std::span<const uint8_t> frame_payload(sfp::payload_ptr(data.data()), fh.payload_size);
+
+  // 2. Decompress the (framed) payload. Fail closed on error.
   std::vector<uint8_t> decompressed_data;
   try {
-    decompress(data, decompressed_data);
+    decompress(frame_payload, decompressed_data);
   } catch (const std::exception & e) {
-    // BUG 2 FIX: Previously execution fell through here and continued with an
-    // empty/partial buffer, publishing corrupted data. Fail closed: log and
-    // return so no downstream parsing runs on invalid input.
     RCLCPP_ERROR(
       this->get_logger(),
       "Decompression Failed: %s", e.what());
     return;
   }
 
+  // 3. Parse the inner header (topic '\0' type '\0').
   std::string topic;
   std::string type;
-  double current_time;
-  parse_header(decompressed_data, topic, type, current_time);
+  parse_header(decompressed_data, topic, type);
 
   if (topic.empty() || type.empty()) {
     RCLCPP_ERROR(this->get_logger(), "Malformed header!");
     return;
   }
 
-  int header_length = sizeof(current_time) + topic.size() + type.size() + 2;
+  size_t header_length = topic.size() + 1 + type.size() + 1;
+  if (header_length > decompressed_data.size()) {
+    RCLCPP_ERROR(this->get_logger(), "Inner payload shorter than header!");
+    return;
+  }
 
   std::span<const uint8_t> payload(
-    decompressed_data.begin() + header_length, decompressed_data.end());
+    decompressed_data.data() + header_length,
+    decompressed_data.size() - header_length);
 
-  float delay = rclcpp::Clock().now().seconds() - current_time;
+  // 4. Transmission delay is derived from the frame timestamp (nanoseconds).
+  const double now_s = std::chrono::duration<double>(
+    std::chrono::system_clock::now().time_since_epoch()).count();
+  const double sent_s = static_cast<double>(fh.timestamp_ns) / 1e9;
+  const double delay = now_s - sent_s;
   RCLCPP_DEBUG(
     this->get_logger(),
-    "Received %lu bytes on topic %s with type %s",
+    "Received frame seq=%llu %lu bytes on topic %s with type %s",
+    static_cast<unsigned long long>(fh.sequence),
     data.size(), topic.c_str(), type.c_str());
   RCLCPP_DEBUG(
     this->get_logger(),
@@ -356,13 +388,13 @@ void NetworkBridge::send_data(std::shared_ptr<SubscriptionManager> manager)
 
   auto header = create_header(topic, type);
 
-  // Form message
+  // Form inner message: [topic '\0' type '\0' | serialized ROS2 message]
   std::vector<uint8_t> message;
   message.reserve(header.size() + data.size());
   message.insert(message.end(), header.begin(), header.end());
   message.insert(message.end(), data.begin(), data.end());
 
-  // Compress data
+  // Compress inner message
   std::vector<uint8_t> compressed_data;
   try {
     compress(message, compressed_data, manager->zstd_compression_level_);
@@ -373,8 +405,27 @@ void NetworkBridge::send_data(std::shared_ptr<SubscriptionManager> manager)
     return;
   }
 
-  // Send data
-  network_interface_->write(compressed_data);
+  // Wrap the compressed payload in a SensorForge frame: magic/version/seq/
+  // timestamp + CRC32C over header and payload. The bridge forwards arbitrary
+  // topics, so the sensor_type is kControl; dedicated sensor publishers use
+  // their specific type.
+  namespace sfp = sensorforge::protocol;
+  const uint64_t timestamp_ns = static_cast<uint64_t>(
+    std::chrono::duration_cast<std::chrono::nanoseconds>(
+      std::chrono::system_clock::now().time_since_epoch()).count());
+
+  std::vector<uint8_t> frame;
+  try {
+    frame = sfp::encode_frame(
+      sfp::SensorType::kControl, tx_sequence_++, timestamp_ns,
+      sfp::kFlagCompressed, compressed_data.data(), compressed_data.size());
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "Frame encode failed: %s", e.what());
+    return;
+  }
+
+  // Send framed data
+  network_interface_->write(frame);
   auto end = std::chrono::system_clock::now();
   RCLCPP_DEBUG(
     this->get_logger(),
@@ -386,18 +437,11 @@ std::vector<uint8_t> NetworkBridge::create_header(
   const std::string & topic,
   const std::string & msg_type)
 {
-  double current_time = rclcpp::Clock().now().seconds();
-  auto current_time_bytes =
-    std::bit_cast<std::array<uint8_t, sizeof(current_time)>>(current_time);
-
-  int header_length =
-    current_time_bytes.size() + topic.size() + 1 + msg_type.size() + 1;
-
+  // Inner header carried inside the frame payload: topic '\0' msg_type '\0'.
+  // The timestamp now lives in the SensorForge frame header (timestamp_ns),
+  // so it is no longer emitted here.
   std::vector<uint8_t> header;
-  header.reserve(header_length);
-
-  header.insert(
-    header.end(), current_time_bytes.begin(), current_time_bytes.end());
+  header.reserve(topic.size() + 1 + msg_type.size() + 1);
 
   header.insert(header.end(), topic.begin(), topic.end());
   header.push_back('\0');
@@ -409,27 +453,37 @@ std::vector<uint8_t> NetworkBridge::create_header(
 
 void NetworkBridge::parse_header(
   const std::vector<uint8_t> & header,
-  std::string & topic, std::string & msg_type,
-  double & time)
+  std::string & topic, std::string & msg_type)
 {
-  // Add 4 for minimum usable header size
-  // (1 char for topic, 1 for msg_type, and 2 null terminators)
-  if (header.size() < sizeof(time) + 4) {
-    RCLCPP_ERROR(this->get_logger(), "Malformed header!");
+  // Minimum usable inner header: 1 char topic + null + 1 char type + null.
+  if (header.size() < 4) {
+    RCLCPP_ERROR(this->get_logger(), "Malformed inner header!");
     return;
   }
 
-  // BUG 1 FIX: The original code did `std::bit_cast<double>(header.data())`,
-  // which bit-casts the *pointer* (8 bytes of address) into a double instead
-  // of the first 8 bytes of the header. It compiled only because pointer and
-  // double are both 8 bytes, but yielded a garbage timestamp. Copy the actual
-  // 8 header bytes into a fixed array and bit_cast that.
-  std::array<uint8_t, sizeof(double)> time_bytes{};
-  std::copy(header.begin(), header.begin() + sizeof(double), time_bytes.begin());
-  time = std::bit_cast<double>(time_bytes);
-  topic = reinterpret_cast<const char *>(header.data() + sizeof(time));
-  msg_type = reinterpret_cast<const char *>(
-    header.data() + sizeof(time) + topic.size() + 1);
+  // Bounded scan for the two null terminators so a corrupt/short payload that
+  // slipped past the frame CRC cannot run reinterpret_cast off the end.
+  const char * base = reinterpret_cast<const char *>(header.data());
+  size_t topic_end = 0;
+  while (topic_end < header.size() && base[topic_end] != '\0') {
+    ++topic_end;
+  }
+  if (topic_end >= header.size() - 1) {
+    RCLCPP_ERROR(this->get_logger(), "Malformed inner header: no type field!");
+    return;
+  }
+  topic.assign(base, topic_end);
+
+  size_t type_start = topic_end + 1;
+  size_t type_end = type_start;
+  while (type_end < header.size() && base[type_end] != '\0') {
+    ++type_end;
+  }
+  if (type_end >= header.size()) {
+    RCLCPP_ERROR(this->get_logger(), "Malformed inner header: unterminated type!");
+    return;
+  }
+  msg_type.assign(base + type_start, type_end - type_start);
 }
 
 void NetworkBridge::compress(
