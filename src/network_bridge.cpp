@@ -66,6 +66,11 @@ void NetworkBridge::shutdown()
   sub_mgrs_.clear();
   timers_.clear();
   publishers_.clear();
+
+  if (wal_writer_) {
+    wal_writer_->close();
+    wal_writer_.reset();
+  }
 }
 
 void NetworkBridge::load_parameters()
@@ -86,6 +91,16 @@ void NetworkBridge::load_parameters()
   int default_zstd_level;
   this->get_parameter("default_rate", default_rate);
   this->get_parameter("default_zstd_level", default_zstd_level);
+
+  // Optional WAL replay recording. Empty (default) disables it.
+  std::string wal_record_dir;
+  this->declare_parameter("wal_record_dir", "");
+  this->get_parameter("wal_record_dir", wal_record_dir);
+  if (!wal_record_dir.empty()) {
+    wal_writer_ = std::make_unique<sensorforge::replay::WalWriter>(wal_record_dir);
+    RCLCPP_INFO(
+      this->get_logger(), "Recording WAL replay log to %s", wal_record_dir.c_str());
+  }
 
   this->declare_parameter("publish_namespace", "");
   this->get_parameter("publish_namespace", publish_namespace_);
@@ -422,6 +437,13 @@ void NetworkBridge::send_data(std::shared_ptr<SubscriptionManager> manager)
   } catch (const std::exception & e) {
     RCLCPP_ERROR(this->get_logger(), "Frame encode failed: %s", e.what());
     return;
+  }
+
+  // Optionally record the frame payload to the WAL replay log (append-only).
+  if (wal_writer_) {
+    wal_writer_->append(
+      timestamp_ns, sfp::SensorType::kControl, tx_sequence_ - 1,
+      compressed_data.data(), compressed_data.size());
   }
 
   // Send framed data

@@ -68,6 +68,8 @@ include_directories(include)
 # ---------------------------------------------------------------------------
 add_library(sensorforge_protocol STATIC
   src/protocol/frame_codec.cpp
+  src/replay/wal_writer.cpp
+  src/replay/wal_reader.cpp
 )
 target_include_directories(sensorforge_protocol PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

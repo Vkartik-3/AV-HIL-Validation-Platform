@@ -36,6 +36,7 @@ SOFTWARE.
 #include "network_bridge/subscription_manager.hpp"
 #include "network_interfaces/network_interface_base.hpp"
 #include "sensorforge/protocol/frame_codec.hpp"
+#include "sensorforge/replay/wal_writer.hpp"
 
 /**
  * @class NetworkBridge
@@ -219,4 +220,11 @@ protected:
   uint64_t frame_reject_count_ = 0;
   /// Subset of rejects attributable to a CRC mismatch (header or payload).
   uint64_t crc_failure_count_ = 0;
+
+  /**
+   * @brief Optional WAL recorder. When the `wal_record_dir` parameter is set,
+   *        every outbound frame's payload is appended to a segmented replay log
+   *        so the session can be deterministically replayed later.
+   */
+  std::unique_ptr<sensorforge::replay::WalWriter> wal_writer_;
 };
