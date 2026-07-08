@@ -134,7 +134,9 @@ jobs:
           path: src/network_bridge
       - name: Install package deps
         run: |
-          apt-get update && apt-get install -y libzstd-dev python3-colcon-common-extensions
+          apt-get update && apt-get install -y \
+            libzstd-dev libboost-system-dev pkg-config \
+            python3-colcon-common-extensions
       - name: colcon build
         shell: bash
         run: |
