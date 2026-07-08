@@ -264,9 +264,13 @@ void NetworkBridge::receive_data(std::span<const uint8_t> data)
   try {
     decompress(data, decompressed_data);
   } catch (const std::exception & e) {
+    // BUG 2 FIX: Previously execution fell through here and continued with an
+    // empty/partial buffer, publishing corrupted data. Fail closed: log and
+    // return so no downstream parsing runs on invalid input.
     RCLCPP_ERROR(
       this->get_logger(),
       "Decompression Failed: %s", e.what());
+    return;
   }
 
   std::string topic;
@@ -415,7 +419,14 @@ void NetworkBridge::parse_header(
     return;
   }
 
-  time = std::bit_cast<double>(header.data());
+  // BUG 1 FIX: The original code did `std::bit_cast<double>(header.data())`,
+  // which bit-casts the *pointer* (8 bytes of address) into a double instead
+  // of the first 8 bytes of the header. It compiled only because pointer and
+  // double are both 8 bytes, but yielded a garbage timestamp. Copy the actual
+  // 8 header bytes into a fixed array and bit_cast that.
+  std::array<uint8_t, sizeof(double)> time_bytes{};
+  std::copy(header.begin(), header.begin() + sizeof(double), time_bytes.begin());
+  time = std::bit_cast<double>(time_bytes);
   topic = reinterpret_cast<const char *>(header.data() + sizeof(time));
   msg_type = reinterpret_cast<const char *>(
     header.data() + sizeof(time) + topic.size() + 1);

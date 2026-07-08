@@ -1,3 +1,50 @@
+---
+## Attribution and Project Status
+
+SensorForge is built on top of network_bridge
+(https://github.com/brow1633/network_bridge) by brow1633,
+developed for the Indy Autonomous Challenge / Purdue AI
+Racing. Licensed under original project license.
+
+## Planned Extensions by Kartik Vadhawana
+
+HIGH-PERFORMANCE SYSTEMS LAYER:
+- Lock-free SPSC ring buffer per sensor stream with
+  seqlock RCU config updates and per-sensor backpressure
+- Binary framing protocol with CRC32C validation,
+  sequence numbers, and timestamp integrity checking
+- Google Benchmark harness measuring msgs/sec and
+  p50/p99/p999 latency at multiple payload sizes
+- WAL-style segmented replay buffer with in-memory
+  index and deterministic playback
+- io_uring async transport backend benchmarked against
+  Boost.Asio baseline
+- libFuzzer harnesses on frame parser, replay log
+  reader, and YAML scenario parser
+- 5,000+ parameterized Google Test assertions
+- CI sanitizer matrix: ASan/UBSan/TSan + libFuzzer
+  smoke + regression gates
+
+GM HIL PLATFORM LAYER:
+- Synthetic AV sensor publishers (LiDAR, camera, IMU,
+  GPS, CAN via vcan0) as C++ ROS2 nodes
+- YAML-driven scenario runner with configurable
+  fault injection and pass/fail assertions
+- Fault injection engine (delay/drop/corrupt/reorder/
+  burst-loss/disconnect) at transport layer
+- Structured JSON/HTML test reports per scenario run
+- Prometheus metrics exporter + Python dashboard
+- Parallel scenario execution across ROS2 namespaces
+- CI regression gates on latency and drop-rate thresholds
+
+## Contributions by Kartik Vadhawana
+
+Completed extensions listed here after implementation.
+
+Licensed under original project license. See LICENSE.
+
+---
+
 # Network Bridge
 [![CI](https://github.com/brow1633/network_bridge/actions/workflows/CI.yml/badge.svg)](https://github.com/brow1633/network_bridge/actions/workflows/CI.yml)
 

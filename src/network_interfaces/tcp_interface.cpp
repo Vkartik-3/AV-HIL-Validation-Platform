@@ -154,6 +154,15 @@ void TcpInterface::receive_thread()
           state = 0;
           break;
         }
+        // BUG 3 (documented fragility): The sender in write() puts the size on
+        // the wire in HOST byte order (raw &size memcpy), while readUint32()
+        // reassembles bytes as big-endian, and this htonl() then swaps again.
+        // The round-trip only happens to work on little-endian x86/ARM where
+        // the double swap cancels; it is NOT endianness-safe and there is no
+        // magic/version/length-sanity/CRC guard. This entire ad-hoc TCP framing
+        // is replaced by the SensorForge binary frame protocol (Extension B,
+        // sensorforge/protocol/frame.hpp) which fixes byte order, bounds-checks
+        // payload_size, and CRC-validates. Do not build new logic on this path.
         payload_size = htonl(payload_size);
         state = 3;
         break;
