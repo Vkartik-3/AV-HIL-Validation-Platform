@@ -68,6 +68,7 @@ if(BUILD_TESTING)
     test/unit/test_fault_injection.cpp
     test/unit/test_report.cpp
     test/unit/test_metrics.cpp
+    test/unit/test_parallel.cpp
   )
   if(TARGET sensorforge_unit_tests)
     target_include_directories(sensorforge_unit_tests PRIVATE
@@ -268,7 +269,22 @@ target_link_libraries(scenario_runner PUBLIC
   sensorforge_metrics
 )
 
-install(TARGETS scenario_runner DESTINATION lib/${PROJECT_NAME})
+# Parallel scenario runner (Extension O).
+add_executable(parallel_runner
+  scenario/scenario_runner.cpp
+  scenario/parallel_runner.cpp
+)
+target_include_directories(parallel_runner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(parallel_runner PUBLIC
+  rclcpp::rclcpp
+  ${sensor_msgs_TARGETS}
+  sensorforge_scenario
+  sensorforge_faults
+  sensorforge_report
+  sensorforge_metrics
+)
+
+install(TARGETS scenario_runner parallel_runner DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY scenario/scenarios DESTINATION share/${PROJECT_NAME}/scenarios)
 
 pluginlib_export_plugin_description_file(network_bridge network_interface_plugins.xml)

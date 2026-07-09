@@ -71,6 +71,7 @@ if(SENSORFORGE_BUILD_TESTS)
     ${SF_ROOT}/test/unit/test_fault_injection.cpp
     ${SF_ROOT}/test/unit/test_report.cpp
     ${SF_ROOT}/test/unit/test_metrics.cpp
+    ${SF_ROOT}/test/unit/test_parallel.cpp
   )
   target_include_directories(sensorforge_unit_tests PRIVATE ${SF_ROOT}/test/unit ${SF_ROOT})
   target_link_libraries(sensorforge_unit_tests
