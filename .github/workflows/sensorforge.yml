@@ -91,14 +91,22 @@ jobs:
           ./build/fuzz_replay_reader  -runs=1000
           ./build/fuzz_yaml_scenario  -runs=1000
 
-  # 5. Release build + Google Benchmark; upload results as an artifact.
-  #    (Baseline regression gates land in Phase 4 / Extension P.)
+  # 5. Release build + Google Benchmark; regression gate vs the previous run's
+  #    results (Extension P), then upload results as an artifact.
   benchmark:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install deps
-        run: sudo apt-get update && sudo apt-get install -y cmake g++ libbenchmark-dev
+        run: sudo apt-get update && sudo apt-get install -y cmake g++ libbenchmark-dev python3
+      # Restore the previous run's baseline (same runner class -> comparable
+      # numbers). First ever run has no cache and simply establishes it.
+      - name: Restore benchmark baseline
+        uses: actions/cache@v4
+        with:
+          path: bench-baseline
+          key: sf-bench-baseline-${{ github.run_id }}
+          restore-keys: sf-bench-baseline-
       - name: Build + run benchmarks (Release)
         run: |
           cmake -S standalone -B build -DCMAKE_BUILD_TYPE=Release \
@@ -106,6 +114,15 @@ jobs:
           cmake --build build -j
           ./build/sensorforge_bench --benchmark_repetitions=3 \
             --benchmark_format=console | tee benchmark_results.txt
+      - name: Regression gate (fail on p99 > 10% / drop > 0.1pp vs previous run)
+        run: |
+          mkdir -p bench-baseline
+          # Compares against the restored baseline (if any), then rewrites it for
+          # the next run. Missing baseline (first run) establishes and passes.
+          python3 ci/check_regression.py \
+            --current benchmark_results.txt \
+            --baseline bench-baseline/baseline.json \
+            --update-baseline
       - uses: actions/upload-artifact@v4
         with:
           name: benchmark-results
