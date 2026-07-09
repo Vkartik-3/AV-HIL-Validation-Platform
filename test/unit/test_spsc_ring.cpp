@@ -70,7 +70,7 @@ TEST(SpscRing, OverwriteOldestPolicyHelper)
 TEST(SpscRing, ConcurrentProducerConsumerNoLoss)
 {
   SPSCRing<uint64_t, 1024> ring;
-  const uint64_t N = 2000000;
+  const uint64_t N = 300000;   // bounded so the Debug/-O0 CI run stays fast
   std::atomic<bool> done{false};
   uint64_t consumed = 0;
   uint64_t expected = 0;

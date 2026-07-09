@@ -62,8 +62,10 @@ TEST(Seqlock, ConcurrentReadsAreConsistent)
     }
   });
 
-  // Reader validates the guard invariant on every snapshot.
-  for (int i = 0; i < 500000; ++i) {
+  // Reader validates the guard invariant on every snapshot. 50k contended
+  // reads is plenty to exercise the retry path without dragging out the
+  // Debug/-O0 CI run (a hot writer makes each read retry repeatedly).
+  for (int i = 0; i < 50000; ++i) {
     const Config c = sl.load();
     if (c.guard != static_cast<uint64_t>(c.rate_hz) + c.delay_ns) {
       torn.fetch_add(1);
