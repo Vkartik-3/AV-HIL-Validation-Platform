@@ -12,6 +12,7 @@ Part of the SensorForge AV HIL validation platform.
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -71,6 +72,14 @@ void PrometheusExporter::stop()
 void PrometheusExporter::serve_loop()
 {
   while (running_.load()) {
+    // Poll with a timeout so stop() is observed promptly. A blocked accept()
+    // is NOT reliably woken by close() from another thread on Linux, which
+    // would deadlock thread_.join(); polling avoids that entirely.
+    struct pollfd pfd{listen_fd_, POLLIN, 0};
+    const int pr = ::poll(&pfd, 1, 200);
+    if (pr <= 0) {
+      continue;   // timeout or interrupted -> re-check running_
+    }
     const int client = ::accept(listen_fd_, nullptr, nullptr);
     if (client < 0) {
       if (!running_.load()) {
