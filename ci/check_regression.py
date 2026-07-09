@@ -26,9 +26,11 @@ import os
 import re
 import sys
 
-P99_FAIL_PCT = 10.0
-DROP_FAIL_ABS_PCT = 0.1
-THPUT_WARN_PCT = 5.0
+# Thresholds are env-overridable so shared CI runners (noisy p99) can use a
+# tolerant value while dedicated/bare-metal hardware uses the strict default.
+P99_FAIL_PCT = float(os.environ.get("SF_P99_FAIL_PCT", "10.0"))
+DROP_FAIL_ABS_PCT = float(os.environ.get("SF_DROP_FAIL_ABS_PCT", "0.1"))
+THPUT_WARN_PCT = float(os.environ.get("SF_THPUT_WARN_PCT", "5.0"))
 
 _BENCH_RE = re.compile(r"^\[BENCH\]\s+(?P<name>\S+)\s+(?P<rest>.+)$")
 _KV_RE = re.compile(r"(\w+/?\w*)=([0-9.eE+-]+)")
