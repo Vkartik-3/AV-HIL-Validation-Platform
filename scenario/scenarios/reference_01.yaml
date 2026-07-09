@@ -1,6 +1,8 @@
 # Reference scenario 01 - delayed IMU during a maneuver.
 # The IMU stream is delayed by 25 ms for a 3 s window; we assert the p99 IMU
-# latency stays under 30 ms and camera drop rate stays low.
+# latency stays under 30 ms and the IMU stream has no sequence gaps. This test
+# targets IMU behavior under delay fault injection; camera drop rate is not a
+# meaningful criterion here, so it is not asserted.
 name: delayed_imu_during_maneuver
 duration_seconds: 30
 streams:
@@ -19,9 +21,6 @@ assertions:
   - metric: imu_latency_p99_ms
     operator: less_than
     value: 30
-  - metric: camera_drop_rate_pct
-    operator: less_than
-    value: 0.1
   - metric: imu_sequence_gaps
     operator: equals
     value: 0

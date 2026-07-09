@@ -13,6 +13,7 @@ and exits non-zero if any assertion failed (so CI can gate on it).
 
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <string>
@@ -78,12 +79,18 @@ int main(int argc, char ** argv)
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
 
-  const auto result = runner->finish();
+  const auto result = runner->finish();   // writes JSON/HTML reports, reaps children
   std::printf(
     "[SCENARIO] %s : %s\n", result.scenario_name.c_str(),
     result.passed ? "PASS" : "FAIL");
+  std::fflush(stdout);
 
-  runner.reset();
   rclcpp::shutdown();
-  return result.passed ? 0 : 1;
+
+  // Force process termination. Reports are already flushed to disk in finish()
+  // and stdout is flushed above, so it is safe to exit without running the
+  // remaining object destructors (which could otherwise block on background
+  // threads / DDS teardown). This guarantees the runner exits promptly after
+  // the scenario window instead of hanging.
+  std::exit(result.passed ? 0 : 1);
 }
