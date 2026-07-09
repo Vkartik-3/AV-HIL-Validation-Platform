@@ -73,14 +73,53 @@ ScenarioRunner::ScenarioRunner(Scenario scenario, std::string ns)
 ScenarioRunner::~ScenarioRunner()
 {
   stop_can_reader();
+  reap_children();
+}
+
+void ScenarioRunner::reap_children()
+{
 #if defined(__linux__)
+  if (child_pids_.empty()) {
+    return;
+  }
+  // Ask children to exit gracefully.
   for (int pid : child_pids_) {
     if (pid > 0) {
       ::kill(pid, SIGINT);
+    }
+  }
+  // Poll for exit up to a grace period (ros2 run can be slow to shut down).
+  std::vector<int> pending = child_pids_;
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+  while (std::chrono::steady_clock::now() < deadline) {
+    bool any_alive = false;
+    for (auto & pid : pending) {
+      if (pid <= 0) {
+        continue;
+      }
+      int status = 0;
+      const pid_t r = ::waitpid(pid, &status, WNOHANG);
+      if (r == pid || r < 0) {
+        pid = -1;   // reaped or already gone
+      } else {
+        any_alive = true;
+      }
+    }
+    if (!any_alive) {
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+  }
+  // Force-kill any survivor so the runner never hangs on exit. SIGKILL cannot
+  // be caught/ignored, so the following waitpid is guaranteed to return.
+  for (int pid : pending) {
+    if (pid > 0) {
+      ::kill(pid, SIGKILL);
       int status = 0;
       ::waitpid(pid, &status, 0);
     }
   }
+  child_pids_.clear();
 #endif
 }
 
@@ -405,20 +444,10 @@ ScenarioResult ScenarioRunner::finish()
   // before we read them.
   stop_can_reader();
 
-#if defined(__linux__)
-  for (int pid : child_pids_) {
-    if (pid > 0) {
-      ::kill(pid, SIGINT);
-    }
-  }
-  for (int pid : child_pids_) {
-    if (pid > 0) {
-      int status = 0;
-      ::waitpid(pid, &status, 0);
-    }
-  }
-  child_pids_.clear();
-#endif
+  // Terminate the spawned publisher processes (bounded: SIGINT then SIGKILL) so
+  // finish() -- and therefore the whole scenario_runner process -- never hangs
+  // on a slow-to-exit `ros2 run` child.
+  reap_children();
 
   // Release any frames still held by fault-engine delay queues.
   for (auto & [stream, engine] : stream_faults_) {

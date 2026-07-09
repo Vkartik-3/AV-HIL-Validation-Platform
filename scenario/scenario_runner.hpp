@@ -59,6 +59,9 @@ public:
 private:
   void spawn_publisher(const StreamConfig & s);
   void subscribe_stream(const StreamConfig & s);
+  // Terminate spawned publisher processes without ever blocking indefinitely:
+  // SIGINT, poll for a grace period, then SIGKILL any survivors.
+  void reap_children();
   void record(const std::string & stream, const rclcpp::Time & stamp);
   void record_direct(const std::string & stream, double latency_ms, double arrival_s);
 
