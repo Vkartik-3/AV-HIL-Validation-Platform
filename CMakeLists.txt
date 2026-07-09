@@ -19,6 +19,7 @@ find_package(tf2_ros REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(nlohmann_json REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(ZSTD REQUIRED libzstd)
@@ -65,6 +66,7 @@ if(BUILD_TESTING)
     test/unit/test_tcp_reassembler.cpp
     test/unit/test_scenario.cpp
     test/unit/test_fault_injection.cpp
+    test/unit/test_report.cpp
   )
   if(TARGET sensorforge_unit_tests)
     target_include_directories(sensorforge_unit_tests PRIVATE
@@ -72,7 +74,7 @@ if(BUILD_TESTING)
       ${CMAKE_CURRENT_SOURCE_DIR}
       ${CMAKE_CURRENT_SOURCE_DIR}/include)
     target_link_libraries(sensorforge_unit_tests
-      sensorforge_protocol sensorforge_scenario sensorforge_faults)
+      sensorforge_protocol sensorforge_scenario sensorforge_faults sensorforge_report)
   endif()
 
   # NOTE: the internal launch tests wait up to 10s (spin_until_future_complete)
@@ -232,6 +234,17 @@ target_link_libraries(sensorforge_scenario PUBLIC yaml-cpp)
 target_compile_features(sensorforge_scenario PUBLIC cxx_std_20)
 set_property(TARGET sensorforge_scenario PROPERTY POSITION_INDEPENDENT_CODE ON)
 
+# Structured report library (Extension L), ROS-free.
+add_library(sensorforge_report STATIC
+  report/report_builder.cpp
+  report/json_report.cpp
+  report/html_report.cpp
+)
+target_include_directories(sensorforge_report PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(sensorforge_report PUBLIC sensorforge_scenario nlohmann_json::nlohmann_json)
+target_compile_features(sensorforge_report PUBLIC cxx_std_20)
+set_property(TARGET sensorforge_report PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 add_executable(scenario_runner
   scenario/scenario_runner.cpp
   scenario/scenario_main.cpp
@@ -242,6 +255,7 @@ target_link_libraries(scenario_runner PUBLIC
   ${sensor_msgs_TARGETS}
   sensorforge_scenario
   sensorforge_faults
+  sensorforge_report
 )
 
 install(TARGETS scenario_runner DESTINATION lib/${PROJECT_NAME})

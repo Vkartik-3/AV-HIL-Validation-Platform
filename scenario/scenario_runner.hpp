@@ -46,6 +46,9 @@ public:
   double duration_seconds() const {return scenario_.duration_seconds;}
   const Scenario & scenario() const {return scenario_;}
 
+  /// Directory to write JSON + HTML reports into (empty = disabled).
+  void set_report_dir(std::string dir) {report_dir_ = std::move(dir);}
+
 private:
   void spawn_publisher(const StreamConfig & s);
   void subscribe_stream(const StreamConfig & s);
@@ -66,6 +69,8 @@ private:
   // delay / duplicate it before the metric is recorded -- simulating the
   // transport-layer fault from the consumer's perspective.
   std::map<std::string, std::unique_ptr<faults::FaultEngine>> stream_faults_;
+
+  std::string report_dir_;
 };
 
 }  // namespace sensorforge::scenario

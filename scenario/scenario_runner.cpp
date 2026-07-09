@@ -16,6 +16,12 @@ Part of the SensorForge AV HIL validation platform.
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
+#include <filesystem>
+
+#include "report/report_types.hpp"
+#include "report/json_report.hpp"
+#include "report/html_report.hpp"
+
 #if defined(__linux__)
 #include <csignal>
 #include <spawn.h>
@@ -230,6 +236,20 @@ ScenarioResult ScenarioRunner::finish()
   }
 
   ScenarioResult result = evaluate_all(scenario_.name, scenario_.assertions, metrics);
+
+  // Structured reports (Extension L).
+  if (!report_dir_.empty()) {
+    std::vector<std::string> stream_names;
+    for (const auto & s : scenario_.streams) {stream_names.push_back(s.name);}
+    const auto rep = report::build_report(
+      result, metrics, stream_names, scenario_.duration_seconds);
+    std::error_code ec;
+    std::filesystem::create_directories(report_dir_, ec);
+    const std::string base = report_dir_ + "/" + scenario_.name;
+    report::write_json(rep, base + ".json");
+    report::write_html(rep, base + ".html");
+    RCLCPP_INFO(this->get_logger(), "Wrote report %s.{json,html}", base.c_str());
+  }
 
   RCLCPP_INFO(
     this->get_logger(), "Scenario '%s' result: %s",

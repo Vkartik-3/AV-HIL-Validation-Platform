@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install deps
-        run: sudo apt-get update && sudo apt-get install -y cmake g++ libgtest-dev libyaml-cpp-dev
+        run: sudo apt-get update && sudo apt-get install -y cmake g++ libgtest-dev libyaml-cpp-dev nlohmann-json3-dev
       - name: Configure + build (Debug)
         run: |
           cmake -S standalone -B build -DCMAKE_BUILD_TYPE=Debug \
@@ -36,7 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install deps
-        run: sudo apt-get update && sudo apt-get install -y cmake g++ libgtest-dev libyaml-cpp-dev
+        run: sudo apt-get update && sudo apt-get install -y cmake g++ libgtest-dev libyaml-cpp-dev nlohmann-json3-dev
       - name: Build with ASan+UBSan
         run: |
           cmake -S standalone -B build -DCMAKE_BUILD_TYPE=Debug \
@@ -136,7 +136,7 @@ jobs:
       - name: Install package deps
         run: |
           apt-get update && apt-get install -y \
-            libzstd-dev libboost-system-dev libyaml-cpp-dev liburing-dev pkg-config \
+            libzstd-dev libboost-system-dev libyaml-cpp-dev liburing-dev nlohmann-json3-dev pkg-config \
             python3-colcon-common-extensions
       - name: colcon build
         shell: bash

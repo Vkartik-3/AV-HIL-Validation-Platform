@@ -29,11 +29,14 @@ int main(int argc, char ** argv)
 
   std::string scenario_path;
   std::string ns = "/scenario";
+  std::string report_dir;
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp(argv[i], "--scenario") == 0 && i + 1 < argc) {
       scenario_path = argv[++i];
     } else if (std::strcmp(argv[i], "--ns") == 0 && i + 1 < argc) {
       ns = argv[++i];
+    } else if (std::strcmp(argv[i], "--report-dir") == 0 && i + 1 < argc) {
+      report_dir = argv[++i];
     }
   }
   if (scenario_path.empty()) {
@@ -52,6 +55,9 @@ int main(int argc, char ** argv)
   }
 
   auto runner = std::make_shared<sensorforge::scenario::ScenarioRunner>(scenario, ns);
+  if (!report_dir.empty()) {
+    runner->set_report_dir(report_dir);
+  }
   runner->start();
 
   // Spin until the scenario duration elapses.

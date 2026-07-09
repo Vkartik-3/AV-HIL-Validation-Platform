@@ -26,6 +26,7 @@
   <depend>tf2_ros</depend>
   <depend>pluginlib</depend>
   <depend>yaml-cpp</depend>
+  <depend>nlohmann-json</depend>
 
 
   <export>

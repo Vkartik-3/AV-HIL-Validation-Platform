@@ -50,6 +50,14 @@ if(SENSORFORGE_BUILD_TESTS)
   add_library(sensorforge_faults STATIC ${SF_ROOT}/faults/fault_engine.cpp)
   target_include_directories(sensorforge_faults PUBLIC ${SF_ROOT})
   target_link_libraries(sensorforge_faults PUBLIC Threads::Threads)
+  # Report library (non-ROS).
+  find_package(nlohmann_json REQUIRED)
+  add_library(sensorforge_report STATIC
+    ${SF_ROOT}/report/report_builder.cpp
+    ${SF_ROOT}/report/json_report.cpp
+    ${SF_ROOT}/report/html_report.cpp)
+  target_include_directories(sensorforge_report PUBLIC ${SF_ROOT})
+  target_link_libraries(sensorforge_report PUBLIC sensorforge_scenario nlohmann_json::nlohmann_json)
   add_executable(sensorforge_unit_tests
     ${SF_ROOT}/test/unit/test_main.cpp
     ${SF_ROOT}/test/unit/test_crc32c.cpp
@@ -61,10 +69,11 @@ if(SENSORFORGE_BUILD_TESTS)
     ${SF_ROOT}/test/unit/test_tcp_reassembler.cpp
     ${SF_ROOT}/test/unit/test_scenario.cpp
     ${SF_ROOT}/test/unit/test_fault_injection.cpp
+    ${SF_ROOT}/test/unit/test_report.cpp
   )
   target_include_directories(sensorforge_unit_tests PRIVATE ${SF_ROOT}/test/unit ${SF_ROOT})
   target_link_libraries(sensorforge_unit_tests
-    sensorforge_protocol sensorforge_scenario sensorforge_faults
+    sensorforge_protocol sensorforge_scenario sensorforge_faults sensorforge_report
     GTest::gtest GTest::gtest_main Threads::Threads)
   add_test(NAME unit COMMAND sensorforge_unit_tests)
 endif()
