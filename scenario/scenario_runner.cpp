@@ -23,12 +23,14 @@ Part of the SensorForge AV HIL validation platform.
 #include "report/html_report.hpp"
 
 #if defined(__linux__)
+#include <cerrno>
 #include <chrono>
 #include <csignal>
 #include <cstring>
 #include <spawn.h>
 #include <sys/wait.h>
 #include <linux/can.h>
+#include <linux/can/raw.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -225,9 +227,16 @@ void ScenarioRunner::record_direct(
 void ScenarioRunner::start_can_reader(const std::string & stream, const std::string & ifname)
 {
 #if defined(__linux__)
+  // Resolve the target StreamMetrics on the main thread (no concurrent walk of
+  // metrics_ from the reader thread).
+  StreamMetrics * sm = metrics_for(stream);
+  if (sm == nullptr) {
+    RCLCPP_ERROR(this->get_logger(), "CAN reader: no metrics for stream '%s'", stream.c_str());
+    return;
+  }
   can_reader_stop_.store(false);
   can_reader_thread_ = std::thread(
-    [this, stream, ifname]() {can_reader_loop(stream, ifname);});
+    [this, ifname, sm]() {can_reader_loop(ifname, sm);});
   RCLCPP_INFO(this->get_logger(), "CAN reader started on %s", ifname.c_str());
 #else
   (void)stream;
@@ -253,45 +262,75 @@ void ScenarioRunner::stop_can_reader()
 #endif
 }
 
-void ScenarioRunner::can_reader_loop(std::string stream, std::string ifname)
+void ScenarioRunner::can_reader_loop(std::string ifname, StreamMetrics * metrics)
 {
 #if defined(__linux__)
-  can_fd_ = ::socket(PF_CAN, SOCK_RAW, CAN_RAW);
-  if (can_fd_ < 0) {
-    RCLCPP_ERROR(this->get_logger(), "CAN reader: socket() failed");
+  const int fd = ::socket(PF_CAN, SOCK_RAW, CAN_RAW);
+  if (fd < 0) {
+    RCLCPP_ERROR(this->get_logger(), "CAN reader: socket() failed: %s", std::strerror(errno));
     return;
   }
+  can_fd_ = fd;
+
   struct ifreq ifr;
   std::memset(&ifr, 0, sizeof(ifr));
   std::strncpy(ifr.ifr_name, ifname.c_str(), IFNAMSIZ - 1);
-  if (::ioctl(can_fd_, SIOCGIFINDEX, &ifr) < 0) {
-    RCLCPP_ERROR(this->get_logger(), "CAN reader: interface %s not found", ifname.c_str());
-    ::close(can_fd_);
+  if (::ioctl(fd, SIOCGIFINDEX, &ifr) < 0) {
+    RCLCPP_ERROR(
+      this->get_logger(), "CAN reader: interface %s not found: %s",
+      ifname.c_str(), std::strerror(errno));
+    ::close(fd);
     can_fd_ = -1;
     return;
   }
+
+  // Ensure locally-transmitted frames are looped back to this (separate)
+  // socket, so we see the can_publisher's frames on vcan. Loopback is on by
+  // default; set it explicitly for robustness across environments.
+  const int loopback = 1;
+  ::setsockopt(fd, SOL_CAN_RAW, CAN_RAW_LOOPBACK, &loopback, sizeof(loopback));
+
   struct sockaddr_can addr;
   std::memset(&addr, 0, sizeof(addr));
   addr.can_family = AF_CAN;
   addr.can_ifindex = ifr.ifr_ifindex;
-  if (::bind(can_fd_, reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr)) < 0) {
-    RCLCPP_ERROR(this->get_logger(), "CAN reader: bind failed on %s", ifname.c_str());
-    ::close(can_fd_);
+  if (::bind(fd, reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr)) < 0) {
+    RCLCPP_ERROR(
+      this->get_logger(), "CAN reader: bind failed on %s: %s",
+      ifname.c_str(), std::strerror(errno));
+    ::close(fd);
     can_fd_ = -1;
     return;
   }
-  // Non-blocking read timeout so stop() is observed promptly.
-  struct timeval tv{0, 100000};
-  ::setsockopt(can_fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+  // Read timeout so the loop periodically re-checks can_reader_stop_.
+  struct timeval tv{0, 100000};   // 100 ms
+  ::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+  RCLCPP_INFO(
+    this->get_logger(), "CAN reader listening on %s (ifindex=%d)",
+    ifname.c_str(), ifr.ifr_ifindex);
 
   bool have_prev_seq = false;
   uint16_t prev_seq = 0;
+  uint64_t frames = 0;
   while (!can_reader_stop_.load()) {
     struct can_frame frame;
-    const ssize_t n = ::read(can_fd_, &frame, sizeof(frame));
-    if (n < static_cast<ssize_t>(sizeof(frame))) {
-      continue;   // timeout / partial
+    const ssize_t n = ::read(fd, &frame, sizeof(frame));
+    if (n < 0) {
+      if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) {
+        continue;   // read timeout / interrupted -> re-check stop flag
+      }
+      RCLCPP_WARN_THROTTLE(
+        this->get_logger(), *this->get_clock(), 1000,
+        "CAN reader: read error: %s", std::strerror(errno));
+      continue;
     }
+    if (n < static_cast<ssize_t>(sizeof(frame))) {
+      continue;   // short read (should not happen for classic CAN)
+    }
+    ++frames;
+
     // Decode embedded seq (data[2..3]) + monotonic-us timestamp (data[4..7]).
     const uint16_t seq = static_cast<uint16_t>(frame.data[2] | (frame.data[3] << 8));
     const uint32_t sent_us = static_cast<uint32_t>(frame.data[4]) |
@@ -315,13 +354,13 @@ void ScenarioRunner::can_reader_loop(std::string stream, std::string ifname)
     have_prev_seq = true;
     prev_seq = seq;
 
-    if (auto * sm = metrics_for(stream)) {
-      sm->record(latency_ms, arrival_s, gap);
-    }
+    metrics->record(latency_ms, arrival_s, gap);   // captured pointer, no lookup
   }
+  RCLCPP_INFO(this->get_logger(), "CAN reader stopped: %llu frames received",
+    static_cast<unsigned long long>(frames));
 #else
-  (void)stream;
   (void)ifname;
+  (void)metrics;
 #endif
 }
 

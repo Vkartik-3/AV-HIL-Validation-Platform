@@ -63,10 +63,12 @@ private:
   void record_direct(const std::string & stream, double latency_ms, double arrival_s);
 
   // SocketCAN raw reader for the CAN stream (Linux). Reads vcan frames and
-  // records count / latency / sequence gaps like the other sensors.
+  // records count / latency / sequence gaps like the other sensors. The target
+  // StreamMetrics* is captured once (stable heap pointer) so the hot loop never
+  // walks metrics_ concurrently with start()'s push_back.
   void start_can_reader(const std::string & stream, const std::string & ifname);
   void stop_can_reader();
-  void can_reader_loop(std::string stream, std::string ifname);
+  void can_reader_loop(std::string ifname, StreamMetrics * metrics);
 
   Scenario scenario_;
   std::string ns_;
