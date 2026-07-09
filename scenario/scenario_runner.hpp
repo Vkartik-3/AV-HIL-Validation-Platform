@@ -28,6 +28,8 @@ hook set with set_fault_engine(); without it, streams are measured unperturbed.
 #include "scenario/metrics.hpp"
 #include "scenario/scenario.hpp"
 #include "faults/fault_engine.hpp"
+#include "metrics/registry.hpp"
+#include "metrics/prometheus_exporter.hpp"
 
 namespace sensorforge::scenario {
 
@@ -48,6 +50,9 @@ public:
 
   /// Directory to write JSON + HTML reports into (empty = disabled).
   void set_report_dir(std::string dir) {report_dir_ = std::move(dir);}
+
+  /// Start a Prometheus /metrics exporter on @p port (0 = disabled).
+  void set_metrics_port(uint16_t port) {metrics_port_ = port;}
 
 private:
   void spawn_publisher(const StreamConfig & s);
@@ -71,6 +76,13 @@ private:
   std::map<std::string, std::unique_ptr<faults::FaultEngine>> stream_faults_;
 
   std::string report_dir_;
+
+  // Prometheus exporter (Extension M).
+  void update_registry();
+  uint16_t metrics_port_ = 0;
+  metrics::Registry registry_;
+  std::unique_ptr<metrics::PrometheusExporter> exporter_;
+  rclcpp::TimerBase::SharedPtr metrics_timer_;
 };
 
 }  // namespace sensorforge::scenario

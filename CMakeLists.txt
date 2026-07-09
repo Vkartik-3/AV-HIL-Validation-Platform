@@ -67,6 +67,7 @@ if(BUILD_TESTING)
     test/unit/test_scenario.cpp
     test/unit/test_fault_injection.cpp
     test/unit/test_report.cpp
+    test/unit/test_metrics.cpp
   )
   if(TARGET sensorforge_unit_tests)
     target_include_directories(sensorforge_unit_tests PRIVATE
@@ -245,6 +246,14 @@ target_link_libraries(sensorforge_report PUBLIC sensorforge_scenario nlohmann_js
 target_compile_features(sensorforge_report PUBLIC cxx_std_20)
 set_property(TARGET sensorforge_report PROPERTY POSITION_INDEPENDENT_CODE ON)
 
+# Prometheus metrics exporter library (Extension M), ROS-free.
+add_library(sensorforge_metrics STATIC
+  metrics/prometheus_exporter.cpp
+)
+target_include_directories(sensorforge_metrics PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_features(sensorforge_metrics PUBLIC cxx_std_20)
+set_property(TARGET sensorforge_metrics PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 add_executable(scenario_runner
   scenario/scenario_runner.cpp
   scenario/scenario_main.cpp
@@ -256,6 +265,7 @@ target_link_libraries(scenario_runner PUBLIC
   sensorforge_scenario
   sensorforge_faults
   sensorforge_report
+  sensorforge_metrics
 )
 
 install(TARGETS scenario_runner DESTINATION lib/${PROJECT_NAME})

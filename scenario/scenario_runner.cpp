@@ -107,9 +107,39 @@ void ScenarioRunner::start()
     subscribe_stream(s);
     spawn_publisher(s);
   }
+  // Optional Prometheus exporter + 1 Hz gauge refresh.
+  if (metrics_port_ != 0) {
+    registry_.set_help("sensorforge_msgs_per_sec", "Messages per second per sensor");
+    registry_.set_help("sensorforge_latency_p99_ms", "p99 end-to-end latency (ms) per sensor");
+    exporter_ = std::make_unique<metrics::PrometheusExporter>(registry_, metrics_port_);
+    if (exporter_->start()) {
+      RCLCPP_INFO(this->get_logger(), "Prometheus /metrics on :%u", metrics_port_);
+      metrics_timer_ = this->create_wall_timer(
+        std::chrono::seconds(1), [this]() {update_registry();});
+    } else {
+      RCLCPP_WARN(this->get_logger(), "Failed to start metrics exporter on :%u", metrics_port_);
+      exporter_.reset();
+    }
+  }
+
   RCLCPP_INFO(
     this->get_logger(), "Scenario '%s' started: %zu streams, %.0fs",
     scenario_.name.c_str(), scenario_.streams.size(), scenario_.duration_seconds);
+}
+
+void ScenarioRunner::update_registry()
+{
+  for (const auto & m : metrics_) {
+    MetricMap mm;
+    m->emit(mm);
+    const std::string & s = m->name();
+    registry_.set_sensor_gauge("sensorforge_msgs_per_sec", s, mm[s + "_msgs_per_sec"]);
+    registry_.set_sensor_gauge("sensorforge_drop_rate_pct", s, mm[s + "_drop_rate_pct"]);
+    registry_.set_sensor_gauge("sensorforge_latency_p50_ms", s, mm[s + "_latency_p50_ms"]);
+    registry_.set_sensor_gauge("sensorforge_latency_p99_ms", s, mm[s + "_latency_p99_ms"]);
+    registry_.set_sensor_gauge("sensorforge_queue_occupancy", s, mm[s + "_received"]);
+    registry_.set_sensor_gauge("sensorforge_sequence_gaps", s, mm[s + "_sequence_gaps"]);
+  }
 }
 
 void ScenarioRunner::spawn_publisher(const StreamConfig & s)
@@ -236,6 +266,14 @@ ScenarioResult ScenarioRunner::finish()
   }
 
   ScenarioResult result = evaluate_all(scenario_.name, scenario_.assertions, metrics);
+
+  // Final metric refresh + scenario pass/fail counters (Extension M).
+  if (exporter_) {
+    update_registry();
+    registry_.add_counter(
+      result.passed ? "sensorforge_scenarios_passed_total" : "sensorforge_scenarios_failed_total",
+      1.0);
+  }
 
   // Structured reports (Extension L).
   if (!report_dir_.empty()) {

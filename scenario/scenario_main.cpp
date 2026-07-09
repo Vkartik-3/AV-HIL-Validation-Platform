@@ -30,6 +30,7 @@ int main(int argc, char ** argv)
   std::string scenario_path;
   std::string ns = "/scenario";
   std::string report_dir;
+  uint16_t metrics_port = 0;
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp(argv[i], "--scenario") == 0 && i + 1 < argc) {
       scenario_path = argv[++i];
@@ -37,6 +38,8 @@ int main(int argc, char ** argv)
       ns = argv[++i];
     } else if (std::strcmp(argv[i], "--report-dir") == 0 && i + 1 < argc) {
       report_dir = argv[++i];
+    } else if (std::strcmp(argv[i], "--metrics-port") == 0 && i + 1 < argc) {
+      metrics_port = static_cast<uint16_t>(std::atoi(argv[++i]));
     }
   }
   if (scenario_path.empty()) {
@@ -57,6 +60,9 @@ int main(int argc, char ** argv)
   auto runner = std::make_shared<sensorforge::scenario::ScenarioRunner>(scenario, ns);
   if (!report_dir.empty()) {
     runner->set_report_dir(report_dir);
+  }
+  if (metrics_port != 0) {
+    runner->set_metrics_port(metrics_port);
   }
   runner->start();
 
