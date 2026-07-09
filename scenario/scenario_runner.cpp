@@ -23,9 +23,16 @@ Part of the SensorForge AV HIL validation platform.
 #include "report/html_report.hpp"
 
 #if defined(__linux__)
+#include <chrono>
 #include <csignal>
+#include <cstring>
 #include <spawn.h>
 #include <sys/wait.h>
+#include <linux/can.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <unistd.h>
 extern char ** environ;
 #endif
 
@@ -63,6 +70,7 @@ ScenarioRunner::ScenarioRunner(Scenario scenario, std::string ns)
 
 ScenarioRunner::~ScenarioRunner()
 {
+  stop_can_reader();
 #if defined(__linux__)
   for (int pid : child_pids_) {
     if (pid > 0) {
@@ -92,10 +100,12 @@ void ScenarioRunner::start()
       auto * sm = metrics_.back().get();
       auto engine = std::make_unique<faults::FaultEngine>(
         [sm](const std::vector<uint8_t> & buf) {
-          if (buf.size() >= sizeof(double)) {
+          if (buf.size() >= 2 * sizeof(double)) {
             double latency_ms = 0.0;
+            double arrival_s = 0.0;
             std::memcpy(&latency_ms, buf.data(), sizeof(double));
-            sm->record(latency_ms);
+            std::memcpy(&arrival_s, buf.data() + sizeof(double), sizeof(double));
+            sm->record(latency_ms, arrival_s);
           }
         });
       for (const auto & f : scenario_.faults) {
@@ -185,20 +195,134 @@ StreamMetrics * ScenarioRunner::metrics_for(const std::string & stream)
 
 void ScenarioRunner::record(const std::string & stream, const rclcpp::Time & stamp)
 {
+  const double now_s = (this->now() - start_time_).seconds();
   const double latency_ms = (this->now() - stamp).seconds() * 1000.0;
   const auto it = stream_faults_.find(stream);
   if (it != stream_faults_.end()) {
     // Route the arrival through the fault engine (drop/delay/duplicate/...);
-    // the engine's callback records the surviving arrivals.
-    const double t_s = (this->now() - start_time_).seconds();
-    std::vector<uint8_t> buf(sizeof(double));
+    // the engine's callback records the surviving arrivals. Carry both the
+    // latency and the arrival time so the consumer tracks the steady-state
+    // window.
+    std::vector<uint8_t> buf(2 * sizeof(double));
     std::memcpy(buf.data(), &latency_ms, sizeof(double));
-    it->second->process(buf, t_s, stream);
+    std::memcpy(buf.data() + sizeof(double), &now_s, sizeof(double));
+    it->second->process(buf, now_s, stream);
     return;
   }
   if (auto * sm = metrics_for(stream)) {
-    sm->record(latency_ms);
+    sm->record(latency_ms, now_s);
   }
+}
+
+void ScenarioRunner::record_direct(
+  const std::string & stream, double latency_ms, double arrival_s)
+{
+  if (auto * sm = metrics_for(stream)) {
+    sm->record(latency_ms, arrival_s);
+  }
+}
+
+void ScenarioRunner::start_can_reader(const std::string & stream, const std::string & ifname)
+{
+#if defined(__linux__)
+  can_reader_stop_.store(false);
+  can_reader_thread_ = std::thread(
+    [this, stream, ifname]() {can_reader_loop(stream, ifname);});
+  RCLCPP_INFO(this->get_logger(), "CAN reader started on %s", ifname.c_str());
+#else
+  (void)stream;
+  (void)ifname;
+  RCLCPP_WARN(this->get_logger(), "SocketCAN reader is Linux-only");
+#endif
+}
+
+void ScenarioRunner::stop_can_reader()
+{
+#if defined(__linux__)
+  can_reader_stop_.store(true);
+  if (can_fd_ >= 0) {
+    ::shutdown(can_fd_, SHUT_RDWR);
+  }
+  if (can_reader_thread_.joinable()) {
+    can_reader_thread_.join();
+  }
+  if (can_fd_ >= 0) {
+    ::close(can_fd_);
+    can_fd_ = -1;
+  }
+#endif
+}
+
+void ScenarioRunner::can_reader_loop(std::string stream, std::string ifname)
+{
+#if defined(__linux__)
+  can_fd_ = ::socket(PF_CAN, SOCK_RAW, CAN_RAW);
+  if (can_fd_ < 0) {
+    RCLCPP_ERROR(this->get_logger(), "CAN reader: socket() failed");
+    return;
+  }
+  struct ifreq ifr;
+  std::memset(&ifr, 0, sizeof(ifr));
+  std::strncpy(ifr.ifr_name, ifname.c_str(), IFNAMSIZ - 1);
+  if (::ioctl(can_fd_, SIOCGIFINDEX, &ifr) < 0) {
+    RCLCPP_ERROR(this->get_logger(), "CAN reader: interface %s not found", ifname.c_str());
+    ::close(can_fd_);
+    can_fd_ = -1;
+    return;
+  }
+  struct sockaddr_can addr;
+  std::memset(&addr, 0, sizeof(addr));
+  addr.can_family = AF_CAN;
+  addr.can_ifindex = ifr.ifr_ifindex;
+  if (::bind(can_fd_, reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr)) < 0) {
+    RCLCPP_ERROR(this->get_logger(), "CAN reader: bind failed on %s", ifname.c_str());
+    ::close(can_fd_);
+    can_fd_ = -1;
+    return;
+  }
+  // Non-blocking read timeout so stop() is observed promptly.
+  struct timeval tv{0, 100000};
+  ::setsockopt(can_fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+  bool have_prev_seq = false;
+  uint16_t prev_seq = 0;
+  while (!can_reader_stop_.load()) {
+    struct can_frame frame;
+    const ssize_t n = ::read(can_fd_, &frame, sizeof(frame));
+    if (n < static_cast<ssize_t>(sizeof(frame))) {
+      continue;   // timeout / partial
+    }
+    // Decode embedded seq (data[2..3]) + monotonic-us timestamp (data[4..7]).
+    const uint16_t seq = static_cast<uint16_t>(frame.data[2] | (frame.data[3] << 8));
+    const uint32_t sent_us = static_cast<uint32_t>(frame.data[4]) |
+      (static_cast<uint32_t>(frame.data[5]) << 8) |
+      (static_cast<uint32_t>(frame.data[6]) << 16) |
+      (static_cast<uint32_t>(frame.data[7]) << 24);
+    const uint32_t now_us = static_cast<uint32_t>(
+      std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count() & 0xFFFFFFFF);
+    const uint32_t latency_us = now_us - sent_us;   // wraps correctly (uint32)
+    const double latency_ms = static_cast<double>(latency_us) / 1000.0;
+    const double arrival_s = (this->now() - start_time_).seconds();
+
+    bool gap = false;
+    if (have_prev_seq) {
+      const uint16_t expected = static_cast<uint16_t>(prev_seq + 1);
+      if (seq != expected) {
+        gap = true;
+      }
+    }
+    have_prev_seq = true;
+    prev_seq = seq;
+
+    if (auto * sm = metrics_for(stream)) {
+      sm->record(latency_ms, arrival_s, gap);
+    }
+  }
+#else
+  (void)stream;
+  (void)ifname;
+#endif
 }
 
 void ScenarioRunner::subscribe_stream(const StreamConfig & s)
@@ -228,10 +352,9 @@ void ScenarioRunner::subscribe_stream(const StreamConfig & s)
           record(name, m.header.stamp);
         }));
   } else if (s.name == "can") {
-    // CAN has no ROS topic (it is a raw vcan bus). Its metrics are collected by
-    // a dedicated CAN consumer when available; here we register the stream so
-    // drop_rate is computed against the expected rate.
-    RCLCPP_INFO(this->get_logger(), "CAN stream registered (measured on vcan bus)");
+    // CAN has no ROS topic (it is a raw vcan bus). Start a SocketCAN reader
+    // thread that measures the bus directly.
+    start_can_reader(s.name, "vcan0");
   } else {
     RCLCPP_WARN(this->get_logger(), "Unknown stream '%s' - no subscription", s.name.c_str());
   }
@@ -239,6 +362,10 @@ void ScenarioRunner::subscribe_stream(const StreamConfig & s)
 
 ScenarioResult ScenarioRunner::finish()
 {
+  // Stop the CAN reader first so the CAN metrics are complete + race-free
+  // before we read them.
+  stop_can_reader();
+
 #if defined(__linux__)
   for (int pid : child_pids_) {
     if (pid > 0) {

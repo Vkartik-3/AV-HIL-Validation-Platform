@@ -13,6 +13,7 @@ throttle) at the configured rate, deterministic given the seed. Linux only.
 ==============================================================================
 */
 
+#include <chrono>
 #include <cmath>
 #include <cstring>
 
@@ -89,6 +90,23 @@ protected:
         break;
       }
     }
+
+    // Embed telemetry so the scenario runner's vcan reader can measure real
+    // drop rate, sequence gaps, and latency: data[0..1] = signal (above),
+    // data[2..3] = 16-bit sequence, data[4..7] = 32-bit monotonic microseconds.
+    // CLOCK_MONOTONIC (steady_clock) is comparable across processes on one host.
+    frame.can_dlc = 8;
+    const uint16_t seq16 = static_cast<uint16_t>(seq & 0xFFFF);
+    frame.data[2] = static_cast<uint8_t>(seq16 & 0xFF);
+    frame.data[3] = static_cast<uint8_t>((seq16 >> 8) & 0xFF);
+    const uint32_t ts_us = static_cast<uint32_t>(
+      std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count() & 0xFFFFFFFF);
+    frame.data[4] = static_cast<uint8_t>(ts_us & 0xFF);
+    frame.data[5] = static_cast<uint8_t>((ts_us >> 8) & 0xFF);
+    frame.data[6] = static_cast<uint8_t>((ts_us >> 16) & 0xFF);
+    frame.data[7] = static_cast<uint8_t>((ts_us >> 24) & 0xFF);
+
     const ssize_t n = ::write(sock_, &frame, sizeof(frame));
     if (n != static_cast<ssize_t>(sizeof(frame))) {
       RCLCPP_WARN_THROTTLE(

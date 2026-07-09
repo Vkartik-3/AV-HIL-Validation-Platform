@@ -29,7 +29,8 @@ public:
     duration_seconds_(duration_seconds) {}
 
   /// Record one received message: its end-to-end latency (ms) and a flag for
-  /// whether a sequence gap was detected before it.
+  /// whether a sequence gap was detected before it. Arrival time is not
+  /// tracked (drop rate falls back to the full scenario duration).
   void record(double latency_ms, bool gap_before = false)
   {
     latencies_ms_.push_back(latency_ms);
@@ -37,6 +38,19 @@ public:
     if (gap_before) {
       ++sequence_gaps_;
     }
+  }
+
+  /// Record a message with its arrival time (seconds, any consistent clock).
+  /// The arrival window [first, last] is used to compute steady-state drop
+  /// rate, excluding publisher/CLI startup dead-time before the first message.
+  void record(double latency_ms, double arrival_s, bool gap_before = false)
+  {
+    if (!has_arrival_) {
+      first_arrival_s_ = arrival_s;
+      has_arrival_ = true;
+    }
+    last_arrival_s_ = arrival_s;
+    record(latency_ms, gap_before);
   }
 
   void add_sequence_gaps(uint64_t n) {sequence_gaps_ += n;}
@@ -57,15 +71,32 @@ public:
     return duration_seconds_ > 0 ? static_cast<double>(received_) / duration_seconds_ : 0.0;
   }
 
+  /// Steady-state drop rate (%). When arrival times were tracked and at least
+  /// two messages arrived, "expected" is computed over the observed window
+  /// [first_arrival, last_arrival] -- so startup dead-time (e.g. `ros2 run`
+  /// launch latency) is NOT counted as drops. Otherwise it falls back to the
+  /// full scenario duration.
   double drop_rate_pct() const
   {
+    const double window = last_arrival_s_ - first_arrival_s_;
+    if (has_arrival_ && received_ >= 2 && window > 0.0) {
+      // Over a window W at rate R, a lossless stream yields R*W intervals
+      // (received-1 observed intervals). Drop = missing intervals.
+      const double expected_intervals = expected_rate_hz_ * window;
+      if (expected_intervals <= 0.0) {
+        return 0.0;
+      }
+      const double observed_intervals = static_cast<double>(received_) - 1.0;
+      const double dropped = expected_intervals - observed_intervals;
+      return 100.0 * (dropped > 0.0 ? dropped : 0.0) / expected_intervals;
+    }
+    // Fallback: expected over the full scenario duration.
     const double expected = expected_rate_hz_ * duration_seconds_;
     if (expected <= 0.0) {
       return 0.0;
     }
     const double dropped = expected - static_cast<double>(received_);
-    const double pct_dropped = 100.0 * (dropped > 0 ? dropped : 0.0) / expected;
-    return pct_dropped;
+    return 100.0 * (dropped > 0.0 ? dropped : 0.0) / expected;
   }
 
   /// Emit this stream's metrics into @p out under keys like
@@ -92,6 +123,9 @@ private:
   std::vector<double> latencies_ms_;
   uint64_t received_ = 0;
   uint64_t sequence_gaps_ = 0;
+  bool has_arrival_ = false;
+  double first_arrival_s_ = 0.0;
+  double last_arrival_s_ = 0.0;
 };
 
 }  // namespace sensorforge::scenario

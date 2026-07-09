@@ -17,9 +17,11 @@ hook set with set_fault_engine(); without it, streams are measured unperturbed.
 
 #pragma once
 
+#include <atomic>
 #include <map>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <rclcpp/rclcpp.hpp>
@@ -58,6 +60,13 @@ private:
   void spawn_publisher(const StreamConfig & s);
   void subscribe_stream(const StreamConfig & s);
   void record(const std::string & stream, const rclcpp::Time & stamp);
+  void record_direct(const std::string & stream, double latency_ms, double arrival_s);
+
+  // SocketCAN raw reader for the CAN stream (Linux). Reads vcan frames and
+  // records count / latency / sequence gaps like the other sensors.
+  void start_can_reader(const std::string & stream, const std::string & ifname);
+  void stop_can_reader();
+  void can_reader_loop(std::string stream, std::string ifname);
 
   Scenario scenario_;
   std::string ns_;
@@ -76,6 +85,11 @@ private:
   std::map<std::string, std::unique_ptr<faults::FaultEngine>> stream_faults_;
 
   std::string report_dir_;
+
+  // SocketCAN reader (Extension I/K follow-up).
+  std::thread can_reader_thread_;
+  std::atomic<bool> can_reader_stop_{false};
+  int can_fd_ = -1;
 
   // Prometheus exporter (Extension M).
   void update_registry();

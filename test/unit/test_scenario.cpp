@@ -139,9 +139,35 @@ TEST(StreamMetrics, DerivesPercentilesAndRates)
 
 TEST(StreamMetrics, DropRateReflectsMissingMessages)
 {
-  StreamMetrics sm("camera", 30.0, 10.0);  // expect 300
-  for (int i = 0; i < 150; ++i) {sm.record(5.0);}  // only half arrived
+  StreamMetrics sm("camera", 30.0, 10.0);  // expect 300 over full duration
+  for (int i = 0; i < 150; ++i) {sm.record(5.0);}  // no arrival -> full-duration fallback
   MetricMap m;
   sm.emit(m);
   SF_EXPECT_NEAR(m["camera_drop_rate_pct"], 50.0, 1e-6);
+}
+
+TEST(StreamMetrics, SteadyStateWindowExcludesStartup)
+{
+  // 200 Hz stream that only STARTS at t=4s (e.g. slow `ros2 run` launch), then
+  // delivers cleanly for 1s. Full-duration math would call this ~99% "drop";
+  // steady-state over [4,5] correctly reports ~0%.
+  StreamMetrics sm("imu", 200.0, 30.0);
+  for (int i = 0; i <= 200; ++i) {
+    sm.record(1.0, 4.0 + i * (1.0 / 200.0));   // 201 msgs -> 200 intervals over 1s
+  }
+  MetricMap m;
+  sm.emit(m);
+  SF_EXPECT_NEAR(m["imu_drop_rate_pct"], 0.0, 0.5);
+}
+
+TEST(StreamMetrics, SteadyStateDetectsRealLoss)
+{
+  // Over a 1s window at 200 Hz we expect 200 intervals; deliver only 100 -> 50%.
+  StreamMetrics sm("imu", 200.0, 30.0);
+  sm.record(1.0, 4.0);
+  for (int i = 1; i < 100; ++i) {sm.record(1.0, 4.0 + i * (1.0 / 200.0));}
+  sm.record(1.0, 5.0);   // 101 msgs -> 100 observed intervals in a 1s window
+  MetricMap m;
+  sm.emit(m);
+  SF_EXPECT_NEAR(m["imu_drop_rate_pct"], 50.0, 2.0);
 }
