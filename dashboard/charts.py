@@ -1,5 +1,6 @@
 """
-SensorForge - Plotly chart builders (Extension N)
+SensorForge Plotly chart builders.
+
 Part of the SensorForge AV HIL validation platform.
 
 Each function returns a Plotly Figure. Callers embed them with
@@ -16,7 +17,8 @@ _PALETTE = ["#4C78A8", "#F58518", "#54A24B", "#E45756", "#72B7B2", "#B279A2"]
 
 
 def latency_histogram(per_sensor: dict[str, dict[str, float]]) -> go.Figure:
-    """Grouped bar of p50/p99/p999 latency (ms) per sensor.
+    """
+    Build a grouped bar of p50/p99/p999 latency (ms) per sensor.
 
     per_sensor: {sensor: {"p50": x, "p99": y, "p999": z}}
     """
@@ -39,7 +41,8 @@ def latency_histogram(per_sensor: dict[str, dict[str, float]]) -> go.Figure:
 
 
 def throughput_over_time(series: dict[str, list[tuple[float, float]]]) -> go.Figure:
-    """Line chart of msgs/sec over time per sensor.
+    """
+    Build a line chart of msgs/sec over time per sensor.
 
     series: {sensor: [(t_seconds, msgs_per_sec), ...]}
     """

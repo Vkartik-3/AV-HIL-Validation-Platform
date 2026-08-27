@@ -171,19 +171,29 @@ TEST(RecorderTest, ByteBudgetHardBreachSheds)
   const std::string dir = temp_dir("budget");
   RecorderConfig cfg;
   cfg.wal_dir = dir;
-  cfg.budget.hard_queue_bytes = 1;   // breach immediately on first poll
+  cfg.budget.hard_queue_bytes = 1;   // any queued byte is a hard breach
   Recorder rec(cfg);
   const size_t s = rec.add_stream(spec_for("lidar", SensorType::kLidar, 8));
-  rec.start();
+
+  // Deliberately NOT started. With no drain thread running, the queued byte
+  // count is stable, so the breach is deterministic. An earlier version of this
+  // test called start() first and then raced the drain thread: on a host where
+  // the consumer kept up, the queue was empty by the time poll_resources() ran,
+  // no breach was detected, and the test failed. Timing is not the behaviour
+  // under test here -- shedding is.
   const auto payload = sftest::make_payload(4096, 2);
   for (int i = 0; i < 64; ++i) {
     rec.capture(s, payload.data(), payload.size());
   }
+  SF_ASSERT_GT(rec.stats().queued_bytes, 0u);
+
   rec.poll_resources();
+  SF_EXPECT_EQ(rec.stats().budget_state, core::BudgetState::kHardBreach);
+
+  // With the hard budget breached, further captures must shed rather than grow.
   for (int i = 0; i < 200; ++i) {
     rec.capture(s, payload.data(), payload.size());
   }
-  rec.stop();
   const auto st = rec.stats();
   SF_EXPECT_GT(st.shed_events, 0u);
   SF_EXPECT_EQ(st.budget_state, core::BudgetState::kHardBreach);

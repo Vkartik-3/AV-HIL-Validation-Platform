@@ -134,7 +134,8 @@ void IoUringInterface::open()
     registered_iovecs_.push_back({s.buf.data(), s.buf.size()});
   }
   // Pin the pool so the kernel need not re-map it per operation.
-  io_uring_register_buffers(&ring_, registered_iovecs_.data(),
+  io_uring_register_buffers(
+    &ring_, registered_iovecs_.data(),
     static_cast<unsigned>(registered_iovecs_.size()));
 
   // Arm all receive slots.
@@ -146,7 +147,8 @@ void IoUringInterface::open()
   running_.store(true);
   cq_thread_ = std::thread([this]() {completion_loop();});
   ready_.store(true);
-  RCLCPP_INFO(node_->get_logger(), "io_uring transport ready (%u recv / %u send buffers)",
+  RCLCPP_INFO(
+    node_->get_logger(), "io_uring transport ready (%u recv / %u send buffers)",
     kNumRecvBuffers, kNumSendBuffers);
 }
 

@@ -286,6 +286,10 @@ jobs:
         shell: bash
         run: |
           source /opt/ros/humble/setup.bash
+          # The launch tests resolve the package through the ament index, so the
+          # freshly built workspace must be on AMENT_PREFIX_PATH. Without this
+          # they fail instantly with "package 'network_bridge' not found".
+          source install/setup.bash
           set +e
           colcon test --packages-select network_bridge --return-code-on-test-failure \
             2>&1 | tee /tmp/colcon_test.log

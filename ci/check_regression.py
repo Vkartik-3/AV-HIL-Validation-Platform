@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-SensorForge - CI benchmark regression gate (Extension P)
+SensorForge CI benchmark regression gate.
+
 Part of the SensorForge AV HIL validation platform.
 
 Parses the [BENCH] lines emitted by sensorforge_bench (and, optionally,
@@ -37,7 +38,8 @@ _KV_RE = re.compile(r"(\w+/?\w*)=([0-9.eE+-]+)")
 
 
 def parse_bench(text: str) -> dict[str, dict[str, float]]:
-    """Parse [BENCH] lines into {name: {metric: value}}.
+    """
+    Parse [BENCH] lines into {name: {metric: value}}.
 
     Handles both "msgs/sec=X p50=Yns p99=Zns" and "GB/s=X" forms; strips unit
     suffixes (ns) from values.

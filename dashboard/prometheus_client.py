@@ -1,5 +1,6 @@
 """
-SensorForge - Prometheus scrape client (Extension N)
+SensorForge Prometheus scrape client.
+
 Part of the SensorForge AV HIL validation platform.
 
 Minimal parser for the Prometheus text exposition format produced by the

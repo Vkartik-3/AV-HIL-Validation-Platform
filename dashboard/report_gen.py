@@ -1,5 +1,6 @@
 """
-SensorForge - Static HTML report generator (Extension N)
+SensorForge static HTML report generator.
+
 Part of the SensorForge AV HIL validation platform.
 
 Combines the JSON scenario reports written by the scenario runner into a single

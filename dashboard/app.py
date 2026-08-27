@@ -1,5 +1,6 @@
 """
-SensorForge - FastAPI analysis dashboard (Extension N)
+SensorForge FastAPI analysis dashboard.
+
 Part of the SensorForge AV HIL validation platform.
 
 Scrapes the SensorForge Prometheus exporter and renders live charts, and lists

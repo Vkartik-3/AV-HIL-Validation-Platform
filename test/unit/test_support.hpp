@@ -42,6 +42,7 @@ inline std::atomic<long long> g_assertions{0};
 #define SF_ASSERT_NE(a, b)   do {SF_TICK; ASSERT_NE(a, b);} while (0)
 #define SF_ASSERT_TRUE(a)    do {SF_TICK; ASSERT_TRUE(a);} while (0)
 #define SF_ASSERT_LT(a, b)   do {SF_TICK; ASSERT_LT(a, b);} while (0)
+#define SF_ASSERT_GT(a, b)   do {SF_TICK; ASSERT_GT(a, b);} while (0)
 
 namespace sftest {
 

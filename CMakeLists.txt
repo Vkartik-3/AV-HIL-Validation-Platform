@@ -43,25 +43,24 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 
   find_package(ament_cmake_uncrustify REQUIRED)
+  # Lint the UPSTREAM ROS sources (and our integration edits to them) with the
+  # ament profile, by listing them explicitly via PATHS.
+  #
+  # This replaces an EXCLUDE-based formulation that silently did nothing:
+  # ament_uncrustify's --exclude matches FILE paths, so naming directories
+  # excluded exactly zero files and every file in the repository was being
+  # linted -- 109 failures, almost all in SensorForge trees that follow their
+  # own style. The failure was invisible because the ros-humble CI job built the
+  # package but never ran colcon test. PATHS states the intent directly instead
+  # of trying to subtract from "everything".
   ament_uncrustify(
-    EXCLUDE
-      bench
-      stress
-      tools
-      fuzz
-      test/unit
-      include/sensorforge
-      src/protocol
-      src/replay
-      src/pipeline
-      src/offload
-      src/core
-      report
-      metrics
-      scenario
-      faults
-      sensors
-      transport
+    PATHS
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/network_bridge.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/subscription_manager.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/subscription_manager_tf.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/network_interfaces
+      ${CMAKE_CURRENT_SOURCE_DIR}/include/network_bridge
+      ${CMAKE_CURRENT_SOURCE_DIR}/include/network_interfaces
   )
 
   # SensorForge GoogleTest unit suite (Extension G). Non-ROS; links the core
