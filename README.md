@@ -47,60 +47,106 @@ producer  -> Recorder::capture()          per-stream sequence + monotonised time
 | Data minimisation | `pipeline/recording_policy.hpp`. Topic allowlist/denylist and metadata-only mode, tested to prove denied payloads never reach the WAL. |
 | Offload | `offload/uploader.hpp`. Sealed-segment queue, bounded, background worker, durable manifest, bounded backoff, restart recovery, filesystem destination with copy→fsync→atomic rename. |
 
-### Measured
+### Validation
 
-Raw artifacts and the exact environment are in [`artifacts/`](artifacts/).
-Headline figures from the end-to-end reference workload (`e2e_reference`), which
-drives the real path with a realistic five-sensor mix:
+Everything below was run and the raw output is committed under
+[`artifacts/`](artifacts/). Nothing here is transcribed by hand or carried over
+from a different machine.
 
-- **Paced, 30 s**: 10,801 messages, 0 dropped, 0 CRC failures, 0 sequence gaps.
-  8.5 MB/s framed and written. Capture-to-record p50 365 us, p99 1,470 us,
-  p999 5,296 us. Peak RSS 5.3 MiB. All 10,801 records replayed and re-validated.
-- **Saturated, 15 s**: 460.5 M capture attempts against a slower consumer.
-  Buffers stayed bounded at 28 MB queued / 79 MiB peak RSS; camera overwrote
-  2.58 M frames while LiDAR/IMU/GPS dropped newest and CAN blocked. Still 0 CRC
-  failures and 0 rejected frames; 121,784 sequence gaps correctly detected.
-- **TSan, 30 s**: 127.6 M ring operations including 63.4 M producer-side
-  evictions. Zero races, zero corruption, zero sequence regressions.
-- **Offload**: recording throughput was 355.5 msgs/s with a healthy destination
-  and 355.7 msgs/s with a dead one, i.e. recording never blocks on offload. A
-  backlog accumulated during a 15 s outage drained in 707 ms with no loss.
+| Check | Where | Result |
+|---|---|---|
+| GitHub Actions, all 8 jobs | x86_64 Ubuntu | green ([run 33122376223](https://github.com/Vkartik-3/AV-HIL-Validation-Platform/actions/runs/33122376223)) |
+| ROS2 build + `colcon test` | `ros:humble`, Docker + CI | 8/8 ctest, both launch tests pass |
+| ROS2 five-sensor end-to-end | `ros:humble`, Docker | PASS (gate in `test/e2e/run_ros2_e2e.sh`) |
+| rosbag2 ingestion | `ros:humble`, Docker | 5,015 records, all validate as frames |
+| Unit suite | macOS arm64 | 198 tests, 101,199 assertions, 0 failures |
+| ASan + UBSan | macOS arm64 | 198 tests, 0 sanitizer errors |
+| TSan, 30 s | macOS arm64 | 126,175,155 ring ops, 61,409,029 evictions, 0 races |
+| Deterministic replay | both | identical digest across runs; CI gates on it |
+
+#### ROS2 end-to-end (the integrated path)
+
+`test/e2e/run_ros2_e2e.sh` drives publishers &rarr; DDS &rarr; SubscriptionManager
+&rarr; bounded buffering &rarr; framing &rarr; CRC &rarr; WAL &rarr; TCP &rarr;
+receiver &rarr; replay, and **fails** on a non-deterministic replay digest, a
+record that does not re-validate as a frame, any receiver sequence gap, missing
+sequence, CRC failure or frame reject, or missing republished topics. Measured
+(45 s, `ros:humble` on Docker, artifacts in `artifacts/linux_ros2_e2e/`):
+
+```
+duration            45.006 s          topics republished  /recv/sensors/{lidar,camera,imu,gps}
+frames sent         12,610            IMU republish rate  200.1 Hz (publisher: 200 Hz)
+frame bytes sent    426.2 MB          WAL records         12,610
+enqueued            lidar 484 / camera 1,458 / imu 9,706 / gps 972
+dropped             0 on every stream       overwritten   0
+sequence gaps       0                 missing sequences   0
+CRC failures        0                 frame rejects       0
+peak queued bytes   camera 460,904 | lidar 196,721 | imu 3,564 | gps 128
+peak RSS            27.3 MB           CPU                 5.0 %
+replay              14,290 records, frame_verify ok=14,290 bad=0, digest stable
+```
+
+#### Core pipeline (no ROS, five-sensor mix incl. CAN-sized payloads)
+
+```
+paced 30 s      10,804 captured = 10,804 recorded, 0 dropped, 0 CRC failures,
+                0 sequence gaps, 8.53 MB/s to the WAL,
+                capture-to-record p50 262 us / p99 1,398 us / p999 7,366 us,
+                peak RSS 5.0 MiB, replay 10,804/10,804 verified, recovery 1.17 ms
+saturated 12 s  406,927,993 capture attempts against a slower consumer:
+                buffers held at 28 MB queued / 70 MiB peak RSS,
+                camera overwrote 2,194,918 while the others dropped newest,
+                0 CRC failures, 122,356 records all replay-verified
+offload         355.9 msgs/s with a healthy destination vs 355.7 msgs/s with a
+                dead one -- recording never blocks on offload; a backlog built
+                during the outage drained in 484 ms with no loss
+```
 
 ### Known limitations
 
-These are real and deliberately stated rather than papered over.
+Stated deliberately rather than papered over.
 
-- **The ROS2 side is written but was not built or tested in this environment.**
-  No ROS2 distribution is available on the development host, so
-  `src/network_bridge.cpp`, `src/subscription_manager.cpp`, the sensor
-  publishers, the scenario runner and the launch tests were not compiled here.
-  The `ros-humble` CI job builds them and now also runs `colcon test`.
-  Everything in `artifacts/` comes from the ROS-free core.
+- **CAN was not exercised through the ROS2 path locally.** CAN rides SocketCAN
+  (`vcan0`), not DDS, and Docker Desktop's LinuxKit VM has no `vcan` module. The
+  CI job runs privileged and brings `vcan0` up on the GitHub runner; the local
+  Docker runs record `vcan0=unavailable` and cover four sensors. CAN-sized
+  payloads are exercised by the ROS-free core workload.
+- **Large frames need TCP, not UDP.** A 196 KB LiDAR frame and a 230 KB camera
+  frame exceed the ~64 KiB UDP datagram limit; over UDP the OS rejects them
+  outright ("Message too long"). The frame header reserves `kFlagFragmented`
+  but **no fragmentation is implemented**, so the end-to-end run uses the TCP
+  interface. This is a real gap, not a configuration preference.
+- **No capture-to-record latency percentiles on the ROS2 path.** The bridge
+  never instrumented that; only the Recorder does. The ROS2 numbers above are
+  throughput, drops, integrity, RSS and CPU. The p50/p99/p999 figures come from
+  the core pipeline workload.
+- **Real-world AV data was not ingested.** rosbag2 *ingestion* is proven end to
+  end (5,084 messages recorded to a bag, replayed back through the bridge,
+  5,015 WAL records, all validating as frames -- `artifacts/rosbag2_ingestion/`),
+  but the bag was captured from this repository's own synthetic publishers, so
+  it is **not** a real-world dataset. Ingesting KITTI or a public AV bag needs a
+  registered download and a converter, which was out of scope here. Once such a
+  bag exists the command is `ros2 bag play <bag> --remap /points:=/sensors/lidar`
+  against a bridge configured per `config/Recorder.yaml`.
+- **QNX is not supported.** Not built, not tested, not claimed. QNX Software
+  Center 2.0.4 was obtained, but the SDP itself sits behind an authenticated
+  myQNX download and was never installed, so no QNX toolchain, target or test
+  result exists.
+- **`fsync` bounds loss to the live segment**, not to zero, unless
+  `every_record` is selected; its cost is in `artifacts/fsync_cost.txt`.
+- **Replay ordering assumes a single writer** -- records are delivered in
+  (segment id, offset) order, which equals capture order for one writer only.
 - **The decoder's stream key is the frame's `sensor_type`, not the topic.** The
-  topic name lives inside the compressed payload, so it is not available before
-  validation. This is strictly better than the previous constant `0` (which
-  merged every topic into one sequence space) but is still coarser than
-  per-topic keying.
-- **`fsync` bounds loss to the live segment, not to zero.** Only
-  `every_record` gives per-record durability, and its cost is measured in
-  `artifacts/fsync_cost.txt`.
-- **Replay ordering assumes a single writer.** `stream_replay` delivers in
-  (segment id, offset) order, which equals capture order for one writer. A
-  multi-writer topology would need a merge step.
-- **No fuzzing result is claimed locally** — Apple's clang ships no libFuzzer
-  runtime. The harnesses compile; CI runs them.
-- **QNX is not supported.** No SDP or toolchain was available; nothing was
-  built or tested on QNX and no QNX support is claimed.
-- **Real recorded AV data (rosbag2 / KITTI) was not ingested.** The ingestion
-  seam exists — `Recorder::capture(stream_id, bytes, len)` accepts arbitrary
-  serialized payloads, so a rosbag2 reader or a KITTI converter only has to call
-  it — but writing and shipping that reader requires a ROS2 environment to
-  compile and a dataset to verify against, neither of which is present. No
-  real-data result is claimed. The intended command once ROS2 is available:
-  `ros2 bag play <bag> --remap /points:=/sensors/lidar` against a bridge
-  configured per `config/Recorder.yaml`.
+  topic name lives inside the compressed payload and is not available before
+  validation. This is coarser than per-topic keying: two topics sharing a
+  sensor type would share a sequence space.
+- **No local fuzzing result** -- Apple's clang ships no libFuzzer runtime. The
+  harnesses compile locally; CI runs them.
 - **This is not a real-time system.** No `SCHED_FIFO`, no CPU pinning, no
   `mlockall`, and the hot path allocates per message.
+- **Benchmark hosts are not controlled.** A developer laptop and shared CI
+  runners, with no pinning or governor control. Numbers are reproducible in
+  kind, not to the digit.
 
 ### Upstream vs SensorForge
 

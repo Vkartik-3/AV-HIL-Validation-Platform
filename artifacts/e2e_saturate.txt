@@ -1,41 +1,41 @@
 
 ===== SensorForge end-to-end reference workload =====
 mode                 saturate
-duration_s           15.172 (producers 15.163, drain tail 0.009)
+duration_s           12.110 (producers 12.108, drain tail 0.002)
 fsync_policy         on_segment_seal
 streams              5
-captured             460521093
-recorded             157388
-dropped              457781660 (99.4051%)
-overwritten          2582045
+captured             406927993
+recorded             122356
+dropped              404610719 (99.4305%)
+overwritten          2194918
 shed_events          0
-msgs_per_sec         30353169.6
-frame_MB_per_sec     839.276
-wal_MB_per_sec       839.612
-wal_records          157388
-wal_bytes            13357467576
-wal_fsyncs           802
-capture_to_record_us p50=201658.0 p99=429603.0 p999=618050.0 (n=157388)
-frames_validated     157388
+msgs_per_sec         33601271.5
+frame_MB_per_sec     815.587
+wal_MB_per_sec       815.915
+wal_records          122356
+wal_bytes            10361120776
+wal_fsyncs           622
+capture_to_record_us p50=188750.0 p99=465927.0 p999=560342.0 (n=122356)
+frames_validated     122356
 frames_rejected      0
 crc_failures         0
-sequence_gaps        121784 (missing=459911078)
+sequence_gaps        96885 (missing=406186934)
 decoder_streams      5
-peak_rss_bytes       82952192 (79.1 MiB)
-peak_cpu_percent     488.0
+peak_rss_bytes       73433088 (70.0 MiB)
+peak_cpu_percent     483.7
 peak_queued_bytes    27984318
 budget_state         ok
-replay_digest        c87d350d (records=157388 bytes=13352116384)
-replay_ms            10216.941
-replay_frames        ok=157388 bad=0
-recovery_ms          2.466 (segments=802 tail_records=1379 truncated=0)
+replay_digest        aa427704 (records=122356 bytes=10356960672)
+replay_ms            8902.997
+replay_frames        ok=122356 bad=0
+recovery_ms          4.079 (segments=622 tail_records=1396 truncated=0)
 
 per-stream:
   stream   type       policy              captured  recorded   dropped    overwr  peak_bytes
-  lidar    lidar      drop_newest          3143889     31232   3112657         0    12779520
-  camera   camera     overwrite_oldest     2613257     31212         0   2582045    14976000
-  imu      imu        drop_newest        221914322     31648 221882674         0      169290
-  gps      gps        drop_newest        232811670     31648 232780022         0       51300
-  can      can        block                  37955     31648      6307         0        8208
+  lidar    lidar      drop_newest          2711996     24224   2687772         0    12779520
+  camera   camera     overwrite_oldest     2219130     24212         0   2194918    14976000
+  imu      imu        drop_newest        193734388     24640 193709748         0      169290
+  gps      gps        drop_newest        208232402     24640 208207762         0       51300
+  can      can        block                  30077     24640      5437         0        8208
 
 wrote artifacts/e2e_reference_saturate.json

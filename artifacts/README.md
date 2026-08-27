@@ -36,6 +36,17 @@ other processes present.
 | `replay_run1.txt`, `replay_run2.txt` | `./wal_replay --dir D --digest --verify` x2 |
 | `fuzz_smoke.txt` | compile-only; see note below |
 
+## Linux / ROS2 artifacts
+
+| Directory | Contents |
+|---|---|
+| `linux_ros2_e2e/` | Full ROS2 five-sensor run: both bridges' Prometheus scrapes, replay validation (x2), per-publisher logs, republished topic list, IMU rate, GPS echo, duration, WAL size, and the exact configs used. |
+| `rosbag2_ingestion/` | rosbag2 record -> replay-through-bridge -> WAL validation. |
+
+Produced inside `ros:humble-ros-base` (arm64) on Docker Desktop, and gated in CI
+by the `ros-humble` job on x86_64 Ubuntu. Command:
+`test/e2e/run_ros2_e2e.sh <install> <config-dir> <out-dir> 45`
+
 ## Not measured here
 
 - **libFuzzer smoke**: Apple's CommandLineTools clang ships no
@@ -48,4 +59,13 @@ other processes present.
   CI job. The end-to-end workload exercises the SensorForge core directly
   (producer threads -> buffer -> frame -> CRC -> WAL -> replay) and deliberately
   does NOT claim to measure DDS.
-- **QNX**: no SDP or toolchain present. Not built, not tested, not claimed.
+- **QNX**: QNX Software Center 2.0.4 was downloaded, but that is the package
+  manager, not the SDP. The SDP itself requires an authenticated myQNX download
+  which was not completed, so no toolchain, target or test result exists. Not
+  built, not tested, not claimed.
+- **AWS**: no EC2 instance was created. The configured credentials were invalid
+  (`InvalidClientTokenId`), and Linux/ROS2 was already covered by CI (x86_64)
+  and Docker (arm64), so no paid resource was launched. Nothing to terminate.
+- **CAN through ROS2 locally**: Docker Desktop's LinuxKit VM has no `vcan`
+  kernel module; local runs record `vcan0=unavailable`. The CI job runs
+  privileged and brings it up.

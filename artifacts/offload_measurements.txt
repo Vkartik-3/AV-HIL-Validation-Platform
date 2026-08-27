@@ -13,3 +13,5 @@ wal_MB_per_sec       8.476
 capture_to_record_us p50=254.0 p99=1092.0 p999=4724.0 (n=5405)
 offload              dest=started_down enqueued=9 uploaded=8 failed_attempts=69 backlog=0 drain_ms=706.9
   stream   type       policy              captured  recorded   dropped    overwr  peak_bytes
+msgs_per_sec         355.7
+offload              dest=started_down enqueued=6 uploaded=5 failed_attempts=44 backlog=0 drain_ms=484.3
