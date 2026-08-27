@@ -1,0 +1,2 @@
+[INFO] [1787870660.114220844] [imu_publisher]: Publishing /sensors/imu at 200.0 Hz (seed=42)
+[INFO] [1787870691.919756220] [rclcpp]: signal_handler(SIGINT/SIGTERM)

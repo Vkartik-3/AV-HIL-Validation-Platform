@@ -1,0 +1,15 @@
+[INFO] [1787870653.717612716] [sf_receiver]: Bridge Prometheus /metrics on :9102
+[INFO] [1787870653.717743133] [sf_receiver]: Topics will be published under the namespace /recv
+[INFO] [1787870653.718373799] [sf_receiver]: role_: server
+[INFO] [1787870653.718419966] [sf_receiver]: Remote Address: 
+[INFO] [1787870653.718462633] [sf_receiver]: Remote Port: 5100
+[INFO] [1787870653.718504758] [sf_receiver]: Loaded network interface: network_bridge::TcpInterface
+[INFO] [1787870653.718582341] [sf_receiver]: Accepting connections
+[INFO] [1787870657.095348342] [sf_receiver]: Accepted connection from 127.0.0.1:54828
+[INFO] [1787870660.130556594] [sf_receiver]: Created publisher on /recv/sensors/imu type sensor_msgs/msg/Imu
+[INFO] [1787870660.180662844] [sf_receiver]: Created publisher on /recv/sensors/camera type sensor_msgs/msg/Image
+[INFO] [1787870660.194098469] [sf_receiver]: Created publisher on /recv/sensors/gps type sensor_msgs/msg/NavSatFix
+[INFO] [1787870660.295714261] [sf_receiver]: Created publisher on /recv/sensors/lidar type sensor_msgs/msg/PointCloud2
+[INFO] [1787870691.927195678] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[INFO] [1787870691.927760678] [sf_receiver]: NetworkBridge: Shuting down
+[INFO] [1787870691.930028136] [sf_receiver]: NetworkBridge: Shuting down

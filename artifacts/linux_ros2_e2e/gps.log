@@ -1,0 +1,2 @@
+[INFO] [1787870660.119755469] [gps_publisher]: Publishing /sensors/gps at 20.0 Hz (seed=42)
+[INFO] [1787870691.919671095] [rclcpp]: signal_handler(SIGINT/SIGTERM)

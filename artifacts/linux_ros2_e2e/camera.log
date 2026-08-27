@@ -1,0 +1,2 @@
+[INFO] [1787870660.118791219] [camera_publisher]: Publishing /sensors/camera at 30.0 Hz (seed=42)
+[INFO] [1787870691.919719386] [rclcpp]: signal_handler(SIGINT/SIGTERM)

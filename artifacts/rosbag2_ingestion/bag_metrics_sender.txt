@@ -6,7 +6,7 @@ sensorforge_bridge_clock_regressions{sensor="/sensors/gps"} 0
 sensorforge_bridge_clock_regressions{sensor="/sensors/imu"} 0
 sensorforge_bridge_clock_regressions{sensor="/sensors/lidar"} 0
 # TYPE sensorforge_bridge_cpu_percent gauge
-sensorforge_bridge_cpu_percent 6.00011
+sensorforge_bridge_cpu_percent 1.00001
 # TYPE sensorforge_bridge_crc_failures_total gauge
 sensorforge_bridge_crc_failures_total 0
 # TYPE sensorforge_bridge_decoder_streams gauge
@@ -18,16 +18,16 @@ sensorforge_bridge_dropped_total{sensor="/sensors/gps"} 0
 sensorforge_bridge_dropped_total{sensor="/sensors/imu"} 0
 sensorforge_bridge_dropped_total{sensor="/sensors/lidar"} 0
 # TYPE sensorforge_bridge_enqueued_total gauge
-sensorforge_bridge_enqueued_total{sensor="/sensors/camera"} 864
-sensorforge_bridge_enqueued_total{sensor="/sensors/gps"} 577
-sensorforge_bridge_enqueued_total{sensor="/sensors/imu"} 5737
-sensorforge_bridge_enqueued_total{sensor="/sensors/lidar"} 288
+sensorforge_bridge_enqueued_total{sensor="/sensors/camera"} 582
+sensorforge_bridge_enqueued_total{sensor="/sensors/gps"} 391
+sensorforge_bridge_enqueued_total{sensor="/sensors/imu"} 3846
+sensorforge_bridge_enqueued_total{sensor="/sensors/lidar"} 196
 # TYPE sensorforge_bridge_frame_bytes_sent_total gauge
-sensorforge_bridge_frame_bytes_sent_total 2.52595e+08
+sensorforge_bridge_frame_bytes_sent_total 1.70802e+08
 # TYPE sensorforge_bridge_frame_rejects_total gauge
 sensorforge_bridge_frame_rejects_total 0
 # TYPE sensorforge_bridge_frames_sent_total gauge
-sensorforge_bridge_frames_sent_total 7459
+sensorforge_bridge_frames_sent_total 5015
 # TYPE sensorforge_bridge_missing_sequences_total gauge
 sensorforge_bridge_missing_sequences_total 0
 # TYPE sensorforge_bridge_overwritten_total gauge
@@ -36,25 +36,25 @@ sensorforge_bridge_overwritten_total{sensor="/sensors/gps"} 0
 sensorforge_bridge_overwritten_total{sensor="/sensors/imu"} 0
 sensorforge_bridge_overwritten_total{sensor="/sensors/lidar"} 0
 # TYPE sensorforge_bridge_peak_queued_bytes gauge
-sensorforge_bridge_peak_queued_bytes{sensor="/sensors/camera"} 460904
-sensorforge_bridge_peak_queued_bytes{sensor="/sensors/gps"} 256
-sensorforge_bridge_peak_queued_bytes{sensor="/sensors/imu"} 972
-sensorforge_bridge_peak_queued_bytes{sensor="/sensors/lidar"} 196721
+sensorforge_bridge_peak_queued_bytes{sensor="/sensors/camera"} 691356
+sensorforge_bridge_peak_queued_bytes{sensor="/sensors/gps"} 384
+sensorforge_bridge_peak_queued_bytes{sensor="/sensors/imu"} 1296
+sensorforge_bridge_peak_queued_bytes{sensor="/sensors/lidar"} 393442
 # TYPE sensorforge_bridge_peak_rss_bytes gauge
-sensorforge_bridge_peak_rss_bytes 2.70541e+07
+sensorforge_bridge_peak_rss_bytes 2.64274e+07
 # HELP sensorforge_bridge_queued_bytes Bytes queued per stream
 # TYPE sensorforge_bridge_queued_bytes gauge
-sensorforge_bridge_queued_bytes{sensor="/sensors/camera"} 230452
-sensorforge_bridge_queued_bytes{sensor="/sensors/gps"} 256
-sensorforge_bridge_queued_bytes{sensor="/sensors/imu"} 972
-sensorforge_bridge_queued_bytes{sensor="/sensors/lidar"} 196721
+sensorforge_bridge_queued_bytes{sensor="/sensors/camera"} 0
+sensorforge_bridge_queued_bytes{sensor="/sensors/gps"} 0
+sensorforge_bridge_queued_bytes{sensor="/sensors/imu"} 0
+sensorforge_bridge_queued_bytes{sensor="/sensors/lidar"} 0
 # TYPE sensorforge_bridge_queued_frames gauge
-sensorforge_bridge_queued_frames{sensor="/sensors/camera"} 1
-sensorforge_bridge_queued_frames{sensor="/sensors/gps"} 2
-sensorforge_bridge_queued_frames{sensor="/sensors/imu"} 3
-sensorforge_bridge_queued_frames{sensor="/sensors/lidar"} 1
+sensorforge_bridge_queued_frames{sensor="/sensors/camera"} 0
+sensorforge_bridge_queued_frames{sensor="/sensors/gps"} 0
+sensorforge_bridge_queued_frames{sensor="/sensors/imu"} 0
+sensorforge_bridge_queued_frames{sensor="/sensors/lidar"} 0
 # TYPE sensorforge_bridge_rss_bytes gauge
-sensorforge_bridge_rss_bytes 2.70541e+07
+sensorforge_bridge_rss_bytes 2.594e+07
 # TYPE sensorforge_bridge_sequence_gaps_total gauge
 sensorforge_bridge_sequence_gaps_total 0
 # TYPE sensorforge_bridge_shed_events_total gauge
@@ -62,10 +62,10 @@ sensorforge_bridge_shed_events_total 0
 # TYPE sensorforge_bridge_timestamp_regressions_total gauge
 sensorforge_bridge_timestamp_regressions_total 0
 # TYPE sensorforge_bridge_wal_bytes_total gauge
-sensorforge_bridge_wal_bytes_total 2.52849e+08
+sensorforge_bridge_wal_bytes_total 1.70973e+08
 # TYPE sensorforge_bridge_wal_fsyncs_total gauge
-sensorforge_bridge_wal_fsyncs_total 15
+sensorforge_bridge_wal_fsyncs_total 10
 # TYPE sensorforge_bridge_wal_records_total gauge
-sensorforge_bridge_wal_records_total 7459
+sensorforge_bridge_wal_records_total 5015
 # TYPE sensorforge_bridge_wal_segment_id gauge
-sensorforge_bridge_wal_segment_id 16
+sensorforge_bridge_wal_segment_id 11

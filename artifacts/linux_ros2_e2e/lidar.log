@@ -1,0 +1,2 @@
+[INFO] [1787870660.114766594] [lidar_publisher]: Publishing /sensors/lidar at 10.0 Hz (seed=42)
+[INFO] [1787870691.919746136] [rclcpp]: signal_handler(SIGINT/SIGTERM)

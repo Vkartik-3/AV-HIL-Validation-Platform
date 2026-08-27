@@ -1,0 +1,13 @@
+
+Files:             sf_sample_0.db3
+Bag size:          166.7 MiB
+Storage id:        sqlite3
+Duration:          19.800034510s
+Start:             Aug 27 2026 22:35:32.362888502 (1787870132.362888502)
+End:               Aug 27 2026 22:35:52.162923012 (1787870152.162923012)
+Messages:          5084
+Topic information: Topic: /sensors/camera | Type: sensor_msgs/msg/Image | Count: 582 | Serialization Format: cdr
+                   Topic: /sensors/gps | Type: sensor_msgs/msg/NavSatFix | Count: 396 | Serialization Format: cdr
+                   Topic: /sensors/imu | Type: sensor_msgs/msg/Imu | Count: 3909 | Serialization Format: cdr
+                   Topic: /sensors/lidar | Type: sensor_msgs/msg/PointCloud2 | Count: 197 | Serialization Format: cdr
+

@@ -1,3 +1,3 @@
-[REPLAY] digest=2ea7f3c7 records=14290 payload_bytes=483052434
-[REPLAY] dir=/out/wal mode=deterministic delivered=14290 segments=29 corrupt_skipped=0 bytes_skipped=0 payload_bytes=483052434 elapsed_ms=535.183
-[REPLAY] frame_verify ok=14290 bad=0
+[REPLAY] digest=8018bf6b records=8194 payload_bytes=277604365
+[REPLAY] dir=/out2/wal mode=deterministic delivered=8194 segments=17 corrupt_skipped=0 bytes_skipped=0 payload_bytes=277604365 elapsed_ms=307.362
+[REPLAY] frame_verify ok=8194 bad=0

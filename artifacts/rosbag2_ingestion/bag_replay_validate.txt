@@ -1,0 +1,3 @@
+[REPLAY] digest=105915b9 records=5015 payload_bytes=170802394
+[REPLAY] dir=/out/wal2 mode=deterministic delivered=5015 segments=11 corrupt_skipped=0 bytes_skipped=0 payload_bytes=170802394 elapsed_ms=160.634
+[REPLAY] frame_verify ok=5015 bad=0

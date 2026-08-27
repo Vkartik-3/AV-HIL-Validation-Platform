@@ -246,7 +246,12 @@ jobs:
   #    ran anywhere. `colcon test` now runs them.
   ros-humble:
     runs-on: ubuntu-latest
-    container: ros:humble-ros-base
+    container:
+      image: ros:humble-ros-base
+      # privileged so the job can modprobe vcan and bring up vcan0: the CAN
+      # stream is carried on SocketCAN, not DDS, so without it the five-sensor
+      # end-to-end run silently degrades to four sensors.
+      options: --privileged
     steps:
       - uses: actions/checkout@v4
         with:
@@ -309,3 +314,29 @@ jobs:
         with:
           name: colcon-test-log
           path: /tmp/colcon_test.log
+      - name: Install E2E tooling
+        run: apt-get update && apt-get install -y curl iproute2 kmod can-utils
+      - name: ROS2 five-sensor end-to-end (DDS -> bridge -> CRC -> WAL -> TCP)
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          set +e
+          ./src/network_bridge/test/e2e/run_ros2_e2e.sh \
+            "$PWD/install" ./src/network_bridge/test/e2e /tmp/e2e 45 \
+            2>&1 | tee /tmp/e2e_run.log
+          rc=${PIPESTATUS[0]}
+          set -e
+          if [ $rc -ne 0 ]; then
+            grep -E "^FAIL|RESULT" /tmp/e2e_run.log | while IFS= read -r line; do
+              printf '::error::%s\n' "$(printf '%s' "$line" | tr -d '\r' | sed 's/%/%25/g')"
+            done
+            exit $rc
+          fi
+      - name: Upload ROS2 E2E artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ros2-e2e
+          path: |
+            /tmp/e2e/logs
+            /tmp/e2e_run.log

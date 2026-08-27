@@ -1,0 +1,45 @@
+/sf_sender:
+  ros__parameters:
+    network_interface: "network_bridge::TcpInterface"
+    TcpInterface:
+      role: "client"
+      remote_address: "127.0.0.1"
+      port: 5100
+    default_rate: 50.0
+    default_zstd_level: 1
+    publish_stale_data: false
+    wal_record_dir: "@WAL_DIR@"
+    wal_segment_bytes: 16777216
+    wal_fsync_policy: "on_segment_seal"
+    metrics_port: 9101
+    structured_logging: true
+    budget_soft_queue_bytes: 134217728
+    budget_hard_queue_bytes: 268435456
+    subscribe_namespace: ""
+    publish_namespace: ""
+    topics:
+      - "/sensors/lidar"
+      - "/sensors/camera"
+      - "/sensors/imu"
+      - "/sensors/gps"
+    /sensors/lidar:
+      sensor_type: "lidar"
+      rate: 10.0
+      max_queued_frames: 64
+      max_queued_bytes: 50331648
+    /sensors/camera:
+      sensor_type: "camera"
+      rate: 30.0
+      max_queued_frames: 64
+      max_queued_bytes: 50331648
+    /sensors/imu:
+      sensor_type: "imu"
+      rate: 200.0
+      max_queued_frames: 512
+      max_queued_bytes: 4194304
+    /sensors/gps:
+      sensor_type: "gps"
+      rate: 20.0
+      max_queued_frames: 256
+      max_queued_bytes: 1048576
+

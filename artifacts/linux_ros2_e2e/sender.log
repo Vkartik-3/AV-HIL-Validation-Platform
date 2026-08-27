@@ -1,0 +1,24 @@
+[INFO] [1787870657.089676801] [sf_sender]: Recording WAL to /out2/wal (fsync=on_segment_seal). Recovery: segments=0 resumed_segment=1 tail_records=0 truncated_bytes=0
+[INFO] [1787870657.090327176] [sf_sender]: Bridge Prometheus /metrics on :9101
+[WARN] [1787870657.091079634] [sf_sender]: Topic /sensors/lidar not found
+[INFO] [1787870657.091266259] [sf_sender]: Topic: /sensors/lidar, Rate: 10.000000 Hz
+[WARN] [1787870657.091600759] [sf_sender]: Topic /sensors/camera not found
+[INFO] [1787870657.091768176] [sf_sender]: Topic: /sensors/camera, Rate: 30.000000 Hz
+[WARN] [1787870657.092076426] [sf_sender]: Topic /sensors/imu not found
+[INFO] [1787870657.092234092] [sf_sender]: Topic: /sensors/imu, Rate: 200.000000 Hz
+[WARN] [1787870657.092569509] [sf_sender]: Topic /sensors/gps not found
+[INFO] [1787870657.092748842] [sf_sender]: Topic: /sensors/gps, Rate: 20.000000 Hz
+[INFO] [1787870657.094458842] [sf_sender]: role_: client
+[INFO] [1787870657.094608467] [sf_sender]: Remote Address: 127.0.0.1
+[INFO] [1787870657.094764967] [sf_sender]: Remote Port: 5100
+[INFO] [1787870657.094914884] [sf_sender]: Loaded network interface: network_bridge::TcpInterface
+[INFO] [1787870657.095263717] [sf_sender]: Connected to server at 127.0.0.1:5100
+[INFO] [1787870660.120135969] [sf_sender]: Created generic subscriber for topic /sensors/imu
+[INFO] [1787870660.128400052] [sf_sender]: Created generic subscriber for topic /sensors/camera
+[INFO] [1787870660.143656136] [sf_sender]: Created generic subscriber for topic /sensors/gps
+[INFO] [1787870660.192225052] [sf_sender]: Created generic subscriber for topic /sensors/lidar
+[INFO] [1787870691.927231553] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[INFO] [1787870691.927922011] [sf_sender]: NetworkBridge: Shuting down
+[ERROR] [1787870691.928103178] [sf_sender]: Failed to receive buffer: End of file
+[ERROR] [1787870691.928311595] [sf_sender]: Receive thread could not receive first start packet
+[INFO] [1787870691.930729178] [sf_sender]: NetworkBridge: Shuting down
