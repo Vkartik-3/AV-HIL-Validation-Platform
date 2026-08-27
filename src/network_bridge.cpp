@@ -702,19 +702,26 @@ void NetworkBridge::update_metrics()
     }
     const std::string & topic = mgr->topic_;
     const auto c = mgr->counters();
-    registry_.set_sensor_gauge("sensorforge_bridge_queued_frames", topic,
+    registry_.set_sensor_gauge(
+      "sensorforge_bridge_queued_frames", topic,
       static_cast<double>(c.queued_frames));
-    registry_.set_sensor_gauge("sensorforge_bridge_queued_bytes", topic,
+    registry_.set_sensor_gauge(
+      "sensorforge_bridge_queued_bytes", topic,
       static_cast<double>(c.queued_bytes));
-    registry_.set_sensor_gauge("sensorforge_bridge_peak_queued_bytes", topic,
+    registry_.set_sensor_gauge(
+      "sensorforge_bridge_peak_queued_bytes", topic,
       static_cast<double>(c.peak_queued_bytes));
-    registry_.set_sensor_gauge("sensorforge_bridge_enqueued_total", topic,
+    registry_.set_sensor_gauge(
+      "sensorforge_bridge_enqueued_total", topic,
       static_cast<double>(c.enqueued));
-    registry_.set_sensor_gauge("sensorforge_bridge_dropped_total", topic,
+    registry_.set_sensor_gauge(
+      "sensorforge_bridge_dropped_total", topic,
       static_cast<double>(c.dropped));
-    registry_.set_sensor_gauge("sensorforge_bridge_overwritten_total", topic,
+    registry_.set_sensor_gauge(
+      "sensorforge_bridge_overwritten_total", topic,
       static_cast<double>(c.overwritten));
-    registry_.set_sensor_gauge("sensorforge_bridge_clock_regressions", topic,
+    registry_.set_sensor_gauge(
+      "sensorforge_bridge_clock_regressions", topic,
       static_cast<double>(mgr->clock_regressions()));
     total_queued_bytes += c.queued_bytes;
     total_dropped += c.dropped;
@@ -723,31 +730,43 @@ void NetworkBridge::update_metrics()
 
   // Link-level integrity, previously incremented and read by nothing.
   const auto ds = frame_decoder_.stats();
-  registry_.set_gauge("sensorforge_bridge_frame_rejects_total",
+  registry_.set_gauge(
+    "sensorforge_bridge_frame_rejects_total",
     static_cast<double>(frame_reject_count_));
-  registry_.set_gauge("sensorforge_bridge_crc_failures_total",
+  registry_.set_gauge(
+    "sensorforge_bridge_crc_failures_total",
     static_cast<double>(crc_failure_count_));
-  registry_.set_gauge("sensorforge_bridge_sequence_gaps_total",
+  registry_.set_gauge(
+    "sensorforge_bridge_sequence_gaps_total",
     static_cast<double>(ds.sequence_gaps));
-  registry_.set_gauge("sensorforge_bridge_missing_sequences_total",
+  registry_.set_gauge(
+    "sensorforge_bridge_missing_sequences_total",
     static_cast<double>(ds.missing_sequences));
-  registry_.set_gauge("sensorforge_bridge_timestamp_regressions_total",
+  registry_.set_gauge(
+    "sensorforge_bridge_timestamp_regressions_total",
     static_cast<double>(ds.timestamp_regressions));
-  registry_.set_gauge("sensorforge_bridge_decoder_streams",
+  registry_.set_gauge(
+    "sensorforge_bridge_decoder_streams",
     static_cast<double>(ds.streams_tracked));
-  registry_.set_gauge("sensorforge_bridge_frames_sent_total",
+  registry_.set_gauge(
+    "sensorforge_bridge_frames_sent_total",
     static_cast<double>(frames_sent_));
-  registry_.set_gauge("sensorforge_bridge_frame_bytes_sent_total",
+  registry_.set_gauge(
+    "sensorforge_bridge_frame_bytes_sent_total",
     static_cast<double>(frame_bytes_sent_));
 
   if (wal_writer_) {
-    registry_.set_gauge("sensorforge_bridge_wal_records_total",
+    registry_.set_gauge(
+      "sensorforge_bridge_wal_records_total",
       static_cast<double>(wal_writer_->records_written()));
-    registry_.set_gauge("sensorforge_bridge_wal_bytes_total",
+    registry_.set_gauge(
+      "sensorforge_bridge_wal_bytes_total",
       static_cast<double>(wal_writer_->bytes_written()));
-    registry_.set_gauge("sensorforge_bridge_wal_fsyncs_total",
+    registry_.set_gauge(
+      "sensorforge_bridge_wal_fsyncs_total",
       static_cast<double>(wal_writer_->fsync_count()));
-    registry_.set_gauge("sensorforge_bridge_wal_segment_id",
+    registry_.set_gauge(
+      "sensorforge_bridge_wal_segment_id",
       static_cast<double>(wal_writer_->current_segment_id()));
   }
 
@@ -756,15 +775,18 @@ void NetworkBridge::update_metrics()
   if (sample.rss_bytes > peak_rss_bytes_) {
     peak_rss_bytes_ = sample.rss_bytes;
   }
-  registry_.set_gauge("sensorforge_bridge_rss_bytes",
+  registry_.set_gauge(
+    "sensorforge_bridge_rss_bytes",
     static_cast<double>(sample.rss_bytes));
-  registry_.set_gauge("sensorforge_bridge_peak_rss_bytes",
+  registry_.set_gauge(
+    "sensorforge_bridge_peak_rss_bytes",
     static_cast<double>(peak_rss_bytes_));
   registry_.set_gauge("sensorforge_bridge_cpu_percent", sample.cpu_percent);
 
   const auto state =
     sensorforge::core::evaluate_budget(budget_, sample.rss_bytes, total_queued_bytes);
-  registry_.set_gauge("sensorforge_bridge_budget_state",
+  registry_.set_gauge(
+    "sensorforge_bridge_budget_state",
     static_cast<double>(static_cast<int>(state)));
   if (state == sensorforge::core::BudgetState::kHardBreach) {
     ++shed_events_;
@@ -774,7 +796,8 @@ void NetworkBridge::update_metrics()
       ",\"queued_bytes\":" + std::to_string(total_queued_bytes) +
       ",\"dropped\":" + std::to_string(total_dropped));
   }
-  registry_.set_gauge("sensorforge_bridge_shed_events_total",
+  registry_.set_gauge(
+    "sensorforge_bridge_shed_events_total",
     static_cast<double>(shed_events_));
 }
 

@@ -33,7 +33,24 @@ jobs:
           total=$(grep -oE '\[ASSERTIONS\] total=[0-9]+' out.txt | grep -oE '[0-9]+')
           echo "Executed assertions: $total"
           test "$total" -ge 5000 || { echo "FAIL: fewer than 5000 assertions"; exit 1; }
-          grep -q '\[  FAILED  \]' out.txt && { echo "FAIL: a test failed"; exit 1; } || true
+          if grep -q '\[  FAILED  \]' out.txt; then
+            # Name the failing tests as annotations, and include the gtest
+            # failure context, so a red run is diagnosable without an
+            # authenticated log fetch.
+            grep -E '^\[  FAILED  \]' out.txt | sort -u | while IFS= read -r line; do
+              printf '::error::%s\n' "$(printf '%s' "$line" | tr -d '\r' | sed 's/%/%25/g')"
+            done
+            grep -B2 -A6 'Failure' out.txt | head -60 | while IFS= read -r line; do
+              printf '::error::%s\n' "$(printf '%s' "$line" | tr -d '\r' | sed 's/%/%25/g')"
+            done
+            exit 1
+          fi
+      - name: Upload unit test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-log
+          path: out.txt
 
   # 2. AddressSanitizer + UndefinedBehaviorSanitizer over the whole suite.
   asan-ubsan:

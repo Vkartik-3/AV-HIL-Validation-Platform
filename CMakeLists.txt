@@ -56,6 +56,12 @@ if(BUILD_TESTING)
       src/pipeline
       src/offload
       src/core
+      report
+      metrics
+      scenario
+      faults
+      sensors
+      transport
   )
 
   # SensorForge GoogleTest unit suite (Extension G). Non-ROS; links the core
