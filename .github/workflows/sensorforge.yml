@@ -1,10 +1,15 @@
 name: SensorForge CI
 
 on:
+  # Run on every branch, not just main. The previous configuration only ran on
+  # pushes to main and PRs into it, which meant a feature branch could never be
+  # validated BEFORE merge -- CI only spoke up once the code was already on the
+  # default branch. Feature branches are exactly what needs gating.
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 # The SensorForge core (protocol / replay / ring / seqlock / reassembler) is
 # ROS-free, so its tests, sanitizers, fuzzers and benchmarks run on plain Ubuntu
