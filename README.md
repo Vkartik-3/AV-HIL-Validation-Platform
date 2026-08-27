@@ -57,7 +57,7 @@ from a different machine.
 |---|---|---|
 | GitHub Actions, all 8 jobs | x86_64 Ubuntu | green ([run 33122376223](https://github.com/Vkartik-3/AV-HIL-Validation-Platform/actions/runs/33122376223)) |
 | ROS2 build + `colcon test` | `ros:humble`, Docker + CI | 8/8 ctest, both launch tests pass |
-| ROS2 five-sensor end-to-end | `ros:humble`, Docker | PASS (gate in `test/e2e/run_ros2_e2e.sh`) |
+| ROS2 end-to-end, 4 sensors | `ros:humble`, Docker + CI | PASS (gate in `test/e2e/run_ros2_e2e.sh`; `vcan0` unavailable, so CAN excluded) |
 | rosbag2 ingestion | `ros:humble`, Docker | 5,015 records, all validate as frames |
 | Unit suite | macOS arm64 | 198 tests, 101,199 assertions, 0 failures |
 | ASan + UBSan | macOS arm64 | 198 tests, 0 sanitizer errors |
@@ -106,11 +106,16 @@ offload         355.9 msgs/s with a healthy destination vs 355.7 msgs/s with a
 
 Stated deliberately rather than papered over.
 
-- **CAN was not exercised through the ROS2 path locally.** CAN rides SocketCAN
-  (`vcan0`), not DDS, and Docker Desktop's LinuxKit VM has no `vcan` module. The
-  CI job runs privileged and brings `vcan0` up on the GitHub runner; the local
-  Docker runs record `vcan0=unavailable` and cover four sensors. CAN-sized
-  payloads are exercised by the ROS-free core workload.
+- **CAN is not exercised through the ROS2 path anywhere yet.** CAN rides
+  SocketCAN (`vcan0`), not DDS. Docker Desktop's LinuxKit VM has no `vcan`
+  module, and running the CI container `--privileged` did **not** fix it either
+  -- the GitHub run reports `vcan0=unavailable` in its annotations, same as
+  local. So the "five-sensor" end-to-end is in practice a **four-sensor** run
+  (LiDAR, camera, IMU, GPS) plus a recorded `vcan0=unavailable`. The script
+  deliberately reports that rather than quietly claiming five. Closing this
+  needs `modprobe vcan` on a real host kernel -- a non-containerised CI job or a
+  VM/EC2 instance. CAN-sized payloads *are* exercised by the ROS-free core
+  workload, but not over SocketCAN through the bridge.
 - **Large frames need TCP, not UDP.** A 196 KB LiDAR frame and a 230 KB camera
   frame exceed the ~64 KiB UDP datagram limit; over UDP the OS rejects them
   outright ("Message too long"). The frame header reserves `kFlagFragmented`

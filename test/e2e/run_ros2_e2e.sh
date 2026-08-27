@@ -19,6 +19,11 @@
 # that fact and continues with the four DDS sensors rather than silently
 # reporting a five-sensor run.
 #
+# MEASURED: vcan0 has been unavailable on every host tried so far -- Docker
+# Desktop's LinuxKit VM lacks the module, and a --privileged CI container did
+# not resolve it either. Closing this needs modprobe vcan on a real host
+# kernel (a non-containerised runner or a VM/EC2 instance).
+#
 # Usage: run_ros2_e2e.sh <workspace_install_dir> <config_dir> <output_dir> [duration_s]
 # =============================================================================
 set +u

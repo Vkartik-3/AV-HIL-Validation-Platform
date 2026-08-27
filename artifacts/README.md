@@ -66,6 +66,8 @@ by the `ros-humble` job on x86_64 Ubuntu. Command:
 - **AWS**: no EC2 instance was created. The configured credentials were invalid
   (`InvalidClientTokenId`), and Linux/ROS2 was already covered by CI (x86_64)
   and Docker (arm64), so no paid resource was launched. Nothing to terminate.
-- **CAN through ROS2 locally**: Docker Desktop's LinuxKit VM has no `vcan`
-  kernel module; local runs record `vcan0=unavailable`. The CI job runs
-  privileged and brings it up.
+- **CAN through ROS2**: not achieved on any host tried. Docker Desktop's
+  LinuxKit VM has no `vcan` module, and a `--privileged` CI container did not
+  resolve it either -- the GitHub run's own annotations read
+  `e2e vcan0=unavailable`. The end-to-end run therefore covers four DDS sensors
+  and records the CAN stream as unavailable rather than claiming it.
