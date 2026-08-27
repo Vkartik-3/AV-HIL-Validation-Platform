@@ -326,8 +326,16 @@ jobs:
             2>&1 | tee /tmp/e2e_run.log
           rc=${PIPESTATUS[0]}
           set -e
+          # Publish the outcome and the vcan0 state as annotations. Raw job logs
+          # need an authenticated API call, so without this there is no way to
+          # confirm from outside whether the run actually included the CAN
+          # stream or silently degraded to the four DDS sensors.
+          grep -E "^vcan0=|^RESULT|^receiver .*=" /tmp/e2e_run.log \
+            | while IFS= read -r line; do
+                printf '::notice::e2e %s\n' "$(printf '%s' "$line" | tr -d '\r' | sed 's/%/%25/g')"
+              done
           if [ $rc -ne 0 ]; then
-            grep -E "^FAIL|RESULT" /tmp/e2e_run.log | while IFS= read -r line; do
+            grep -E "^FAIL" /tmp/e2e_run.log | while IFS= read -r line; do
               printf '::error::%s\n' "$(printf '%s' "$line" | tr -d '\r' | sed 's/%/%25/g')"
             done
             exit $rc
