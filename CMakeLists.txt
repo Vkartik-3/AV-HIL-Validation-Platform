@@ -69,6 +69,16 @@ if(BUILD_TESTING)
     test/unit/test_report.cpp
     test/unit/test_metrics.cpp
     test/unit/test_parallel.cpp
+    test/unit/test_stream_buffer.cpp
+    test/unit/test_ring_overwrite.cpp
+    test/unit/test_wal_restart.cpp
+    test/unit/test_replay_digest.cpp
+    test/unit/test_sequence_integrity.cpp
+    test/unit/test_recorder.cpp
+    test/unit/test_recording_policy.cpp
+    test/unit/test_trigger.cpp
+    test/unit/test_offload.cpp
+    test/unit/test_resource_monitor.cpp
   )
   if(TARGET sensorforge_unit_tests)
     target_include_directories(sensorforge_unit_tests PRIVATE
@@ -76,7 +86,8 @@ if(BUILD_TESTING)
       ${CMAKE_CURRENT_SOURCE_DIR}
       ${CMAKE_CURRENT_SOURCE_DIR}/include)
     target_link_libraries(sensorforge_unit_tests
-      sensorforge_protocol sensorforge_scenario sensorforge_faults sensorforge_report)
+      sensorforge_protocol sensorforge_pipeline
+      sensorforge_scenario sensorforge_faults sensorforge_report)
   endif()
 
   # NOTE: the internal launch tests wait up to 10s (spin_until_future_complete)
@@ -104,7 +115,19 @@ add_library(sensorforge_protocol STATIC
   src/protocol/frame_codec.cpp
   src/replay/wal_writer.cpp
   src/replay/wal_reader.cpp
+  src/core/resource_monitor.cpp
 )
+
+# Recording pipeline (multi-stream recorder, selective recording, recording
+# policy) and sealed-segment offload. ROS-free.
+add_library(sensorforge_pipeline STATIC
+  src/pipeline/recorder.cpp
+  src/offload/uploader.cpp
+)
+target_include_directories(sensorforge_pipeline PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+target_compile_features(sensorforge_pipeline PUBLIC cxx_std_20)
+set_property(TARGET sensorforge_pipeline PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # Fault injection engine (Extension K), ROS-free.
 add_library(sensorforge_faults STATIC
@@ -143,6 +166,14 @@ if(SENSORFORGE_BUILD_STRESS)
   target_link_libraries(spsc_tsan_stress PRIVATE Threads::Threads)
 endif()
 
+# Prometheus metrics exporter library (Extension M), ROS-free.
+add_library(sensorforge_metrics STATIC
+  metrics/prometheus_exporter.cpp
+)
+target_include_directories(sensorforge_metrics PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_features(sensorforge_metrics PUBLIC cxx_std_20)
+set_property(TARGET sensorforge_metrics PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 add_executable(network_bridge
     src/network_bridge.cpp
     src/subscription_manager.cpp
@@ -166,7 +197,9 @@ target_link_libraries(network_bridge PUBLIC
   ${ZSTD_LIBRARIES}
   sensorforge_protocol
   sensorforge_faults
+  sensorforge_metrics
 )
+target_include_directories(network_bridge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(udp_interface PUBLIC
   pluginlib::pluginlib
@@ -247,14 +280,6 @@ target_link_libraries(sensorforge_report PUBLIC sensorforge_scenario nlohmann_js
 target_compile_features(sensorforge_report PUBLIC cxx_std_20)
 set_property(TARGET sensorforge_report PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-# Prometheus metrics exporter library (Extension M), ROS-free.
-add_library(sensorforge_metrics STATIC
-  metrics/prometheus_exporter.cpp
-)
-target_include_directories(sensorforge_metrics PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_features(sensorforge_metrics PUBLIC cxx_std_20)
-set_property(TARGET sensorforge_metrics PROPERTY POSITION_INDEPENDENT_CODE ON)
-
 add_executable(scenario_runner
   scenario/scenario_runner.cpp
   scenario/scenario_main.cpp
@@ -284,7 +309,16 @@ target_link_libraries(parallel_runner PUBLIC
   sensorforge_metrics
 )
 
-install(TARGETS scenario_runner parallel_runner DESTINATION lib/${PROJECT_NAME})
+# wal_replay: deterministic replay tool (the WAL reader's first shipped
+# consumer) and the end-to-end reference workload.
+add_executable(wal_replay src/replay/replay_main.cpp)
+target_link_libraries(wal_replay PUBLIC sensorforge_protocol)
+
+add_executable(e2e_reference tools/e2e_reference.cpp)
+target_link_libraries(e2e_reference PUBLIC sensorforge_pipeline)
+
+install(TARGETS scenario_runner parallel_runner wal_replay e2e_reference
+  DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY scenario/scenarios DESTINATION share/${PROJECT_NAME}/scenarios)
 
 pluginlib_export_plugin_description_file(network_bridge network_interface_plugins.xml)

@@ -185,19 +185,88 @@ FrameError FrameDecoder::decode(
     return err;
   }
 
-  StreamState & st = last_[stream_key];
-  if (st.seen) {
-    if (out.sequence < st.last_sequence) {
-      return FrameError::kSequenceRegression;
-    }
-    if (out.timestamp_ns < st.last_timestamp_ns) {
-      return FrameError::kTimestampRegression;
+  // Bound the per-stream state. stream_key is derived from remote input, so an
+  // unbounded map is a memory-growth vector. Beyond kMaxStreams every further
+  // key folds onto a single overflow bucket; integrity for those streams is
+  // approximate but memory is not.
+  uint64_t key = stream_key;
+  if (last_.size() >= kMaxStreams && last_.find(key) == last_.end()) {
+    key = ~uint64_t{0};   // overflow bucket
+    if (last_.find(key) == last_.end() && last_.size() >= kMaxStreams) {
+      ++evicted_;
     }
   }
-  st.seen = true;
-  st.last_sequence = out.sequence;
-  st.last_timestamp_ns = out.timestamp_ns;
-  return FrameError::kOk;
+
+  StreamState & st = last_[key];
+  if (!st.seen) {
+    st.seen = true;
+    st.last_sequence = out.sequence;
+    st.last_timestamp_ns = out.timestamp_ns;
+    ++st.integrity.frames_ok;
+    st.integrity.last_sequence = out.sequence;
+    st.integrity.last_timestamp_ns = out.timestamp_ns;
+    return FrameError::kOk;
+  }
+
+  // ---- timestamp: count, never wedge --------------------------------------
+  if (out.timestamp_ns < st.last_timestamp_ns) {
+    ++st.integrity.timestamp_regressions;
+  } else {
+    st.last_timestamp_ns = out.timestamp_ns;
+  }
+  st.integrity.last_timestamp_ns = st.last_timestamp_ns;
+
+  // ---- sequence -----------------------------------------------------------
+  if (out.sequence > st.last_sequence) {
+    const uint64_t missing = out.sequence - st.last_sequence - 1;
+    if (missing > 0) {
+      ++st.integrity.sequence_gaps;
+      st.integrity.missing_sequences += missing;
+    }
+    st.last_sequence = out.sequence;
+    st.consecutive_regressions = 0;
+    ++st.integrity.frames_ok;
+    st.integrity.last_sequence = st.last_sequence;
+    return FrameError::kOk;
+  }
+
+  // sequence <= last: a duplicate, a reorder, or a peer that restarted.
+  ++st.integrity.sequence_regressions;
+  ++st.consecutive_regressions;
+  if (st.consecutive_regressions >= kResyncThreshold) {
+    // Sustained regression means the peer re-based (restart), not a stray
+    // reorder. Re-base on the new value instead of rejecting forever.
+    st.last_sequence = out.sequence;
+    st.consecutive_regressions = 0;
+    ++st.integrity.resyncs;
+    ++st.integrity.frames_ok;
+    st.integrity.last_sequence = st.last_sequence;
+    return FrameError::kOk;
+  }
+  return FrameError::kSequenceRegression;
+}
+
+StreamIntegrity FrameDecoder::stream(uint64_t stream_key) const
+{
+  const auto it = last_.find(stream_key);
+  return it == last_.end() ? StreamIntegrity{} : it->second.integrity;
+}
+
+DecoderStats FrameDecoder::stats() const
+{
+  DecoderStats s;
+  for (const auto & [k, st] : last_) {
+    (void)k;
+    s.frames_ok += st.integrity.frames_ok;
+    s.sequence_gaps += st.integrity.sequence_gaps;
+    s.missing_sequences += st.integrity.missing_sequences;
+    s.sequence_regressions += st.integrity.sequence_regressions;
+    s.timestamp_regressions += st.integrity.timestamp_regressions;
+    s.resyncs += st.integrity.resyncs;
+  }
+  s.streams_tracked = last_.size();
+  s.streams_evicted = evicted_;
+  return s;
 }
 
 }  // namespace sensorforge::protocol

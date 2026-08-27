@@ -140,24 +140,15 @@ void SubscriptionManager::callback(
   auto buff = serialized_msg->get_rcl_serialized_message().buffer;
   std::copy(buff, buff + serialized_msg->size(), frame.data.begin());
   frame.sequence = capture_sequence_++;
-  frame.timestamp_ns = static_cast<uint64_t>(
-    std::chrono::duration_cast<std::chrono::nanoseconds>(
-      std::chrono::system_clock::now().time_since_epoch()).count());
+  // Monotonised wall clock: still a wall-clock value for human correlation, but
+  // guaranteed never to regress, so a backwards NTP step cannot make the
+  // receiver's monotonicity check reject the link.
+  frame.timestamp_ns = clock_.next();
+  frame.capture_mono_ns = sensorforge::core::mono_now_ns();
 
-  const auto result = sensorforge::core::apply_policy(ring_, frame, policy_);
-  switch (result) {
-    case sensorforge::core::PushResult::kEnqueued:
-    case sensorforge::core::PushResult::kBlockedThenEnqueued:
-      ++enqueued_count_;
-      break;
-    case sensorforge::core::PushResult::kOverwrote:
-      ++overwritten_count_;
-      ++enqueued_count_;
-      break;
-    case sensorforge::core::PushResult::kDroppedNewest:
-      ++dropped_count_;
-      break;
-  }
+  // StreamBuffer applies this stream's policy and maintains frame/byte
+  // accounting; the counters it keeps are what the bridge now exports.
+  buffer_.push(std::move(frame));
 }
 
 void SubscriptionManager::check_subscription()
@@ -173,8 +164,8 @@ bool SubscriptionManager::has_data() const
   if (!received_msg_) {
     return false;
   }
-  // Fresh data queued in the ring, or the "resend last" path is enabled.
-  if (!ring_.empty_approx()) {
+  // Fresh data queued in the buffer, or the "resend last" path is enabled.
+  if (!buffer_.empty()) {
     return true;
   }
   return publish_stale_data_;
@@ -194,11 +185,11 @@ const std::vector<uint8_t> & SubscriptionManager::get_data(bool & is_valid)
     return current_frame_.data;
   }
 
-  // Consumer side of the SPSC ring: pop the next queued frame.
+  // Consumer side of the stream buffer: pop the next queued frame.
   sensorforge::core::SensorFrame popped;
-  if (ring_.try_pop(popped)) {
+  if (buffer_.pop(popped)) {
     current_frame_ = std::move(popped);
-    is_stale_ = ring_.empty_approx();
+    is_stale_ = buffer_.empty();
     is_valid = true;
     return current_frame_.data;
   }
@@ -210,6 +201,6 @@ const std::vector<uint8_t> & SubscriptionManager::get_data(bool & is_valid)
   }
 
   is_stale_ = true;
-  RCLCPP_WARN(node_->get_logger(), "Send Timer: No fresh data in ring");
+  RCLCPP_WARN(node_->get_logger(), "Send Timer: No fresh data in buffer");
   return current_frame_.data;
 }

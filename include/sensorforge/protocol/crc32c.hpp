@@ -138,6 +138,30 @@ inline uint32_t crc32c(const uint8_t * data, size_t len)
   return crc ^ 0xFFFFFFFFu;
 }
 
+
+/**
+ * @brief Incremental CRC32C over a chain of buffers.
+ *
+ * @p running is a previously finalized crc32c value (or 0 to start a chain).
+ * The finalization XOR is undone, the new bytes folded in, and the value
+ * re-finalized, so crc32c_update(0, d, n) == crc32c(d, n) and chaining two
+ * buffers equals the CRC of their concatenation.
+ */
+inline uint32_t crc32c_update(uint32_t running, const uint8_t * data, size_t len)
+{
+  uint32_t crc = running ^ 0xFFFFFFFFu;
+#if defined(SENSORFORGE_X86)
+  crc = detail::has_sse42()
+    ? detail::crc32c_hw(crc, data, len)
+    : detail::crc32c_software(crc, data, len);
+#elif defined(SENSORFORGE_ARM_CRC)
+  crc = detail::crc32c_hw(crc, data, len);
+#else
+  crc = detail::crc32c_software(crc, data, len);
+#endif
+  return crc ^ 0xFFFFFFFFu;
+}
+
 /// Convenience overload for contiguous byte containers (vector, span, ...).
 template<typename Container>
 inline uint32_t crc32c(const Container & c)

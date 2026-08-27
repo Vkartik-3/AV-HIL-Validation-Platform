@@ -1,0 +1,88 @@
+# =============================================================================
+# SensorForge recorder configuration (example)
+#
+# These parameters are read by the network_bridge node. Everything here is
+# RUNTIME configuration -- the audit found the previous buffering was a
+# compile-time 1024-slot ring with a hard-coded policy that no configuration
+# could reach.
+# =============================================================================
+/**/*:
+  ros__parameters:
+    network_interface: "network_bridge::UdpInterface"
+
+    UdpInterface:
+      local_address: "127.0.0.1"
+      receive_port: 5000
+      remote_address: "127.0.0.1"
+      send_port: 5001
+
+    # ---- recording -----------------------------------------------------
+    # Empty disables recording. A restart against an existing directory now
+    # RESUMES it (discovers segments, validates the tail, appends); it used to
+    # truncate the previous run's first segment.
+    wal_record_dir: "/var/lib/sensorforge/wal"
+    wal_segment_bytes: 67108864          # 64 MiB
+    # never | on_segment_seal | interval | every_record
+    #   never           fastest; survives process crash, NOT power loss
+    #   on_segment_seal default; bounded loss to the live segment
+    #   interval        fsync at most every wal_fsync_interval_ms
+    #   every_record    strongest, slowest
+    wal_fsync_policy: "on_segment_seal"
+    wal_fsync_interval_ms: 1000
+
+    # ---- observability --------------------------------------------------
+    # 0 disables. The bridge (not just the scenario runner) now exports queue
+    # depth, queued bytes, drops, overwrites, CRC failures, frame rejects,
+    # sequence gaps, WAL records/bytes, RSS and CPU.
+    metrics_port: 9091
+    structured_logging: true             # one JSON line per notable event
+
+    # ---- resource budgets -----------------------------------------------
+    # 0 disables a limit. Soft breach logs and counts; hard breach triggers the
+    # documented shedding behaviour instead of unbounded growth.
+    budget_soft_rss_bytes: 1073741824     # 1 GiB
+    budget_hard_rss_bytes: 2147483648     # 2 GiB
+    budget_soft_queue_bytes: 268435456    # 256 MiB
+    budget_hard_queue_bytes: 536870912    # 512 MiB
+
+    default_rate: 100.0
+    default_zstd_level: 3
+    publish_stale_data: false
+
+    topics:
+      - "/sensors/lidar"
+      - "/sensors/camera"
+      - "/sensors/imu"
+      - "/sensors/gps"
+
+    # ---- per-stream configuration ---------------------------------------
+    # sensor_type selects the default backpressure policy:
+    #   camera -> overwrite_oldest  (freshness beats history)
+    #   lidar  -> drop_newest       (preserve queued sweep ordering)
+    #   imu    -> drop_newest
+    #   gps    -> drop_newest
+    #   can    -> block             (bounded wait, then shed; never unbounded)
+    #   ctrl   -> drop_newest       (default for generic bridged topics)
+    /sensors/lidar:
+      sensor_type: "lidar"
+      rate: 10.0
+      max_queued_frames: 64
+      max_queued_bytes: 50331648          # 48 MiB
+
+    /sensors/camera:
+      sensor_type: "camera"
+      rate: 30.0
+      max_queued_frames: 64
+      max_queued_bytes: 50331648
+
+    /sensors/imu:
+      sensor_type: "imu"
+      rate: 200.0
+      max_queued_frames: 512
+      max_queued_bytes: 4194304           # 4 MiB
+
+    /sensors/gps:
+      sensor_type: "gps"
+      rate: 20.0
+      max_queued_frames: 256
+      max_queued_bytes: 1048576

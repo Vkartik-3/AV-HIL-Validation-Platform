@@ -1,0 +1,4 @@
+[STRESS] produced=31541339 consumed=31540487 ring_mismatches=0 torn_seqlock_reads=0
+[STRESS] overwrite produced=63920516 consumed=605120 evicted=62969314 mismatches=0 seq_regressions=0
+[STRESS] total_ring_ops=127607462
+[STRESS] PASS: no corruption (run under TSan to check for races)

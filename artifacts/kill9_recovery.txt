@@ -1,0 +1,5 @@
+[REPLAY] digest=376e4332 records=1447 payload_bytes=36276714
+[REPLAY] dir=/private/tmp/claude-501/-Users-kartikvadhawana-Desktop-gm-project-network-bridge/744dc729-0a2b-4f41-bb2f-9a95e6741c20/scratchpad/kill_wal mode=deterministic delivered=1447 segments=3 corrupt_skipped=0 bytes_skipped=0 payload_bytes=36276714 elapsed_ms=30.279
+[REPLAY] frame_verify ok=1447 bad=0
+  prior records preserved: True (+359 new)
+  RESTART-AFTER-KILL: PASS

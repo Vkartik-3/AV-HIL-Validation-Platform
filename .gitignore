@@ -55,3 +55,6 @@ CATKIN_IGNORE
 
 # Vscode
 .vscode/
+
+# macOS
+.DS_Store

@@ -1,0 +1,41 @@
+
+===== SensorForge end-to-end reference workload =====
+mode                 paced
+duration_s           30.105 (producers 30.103, drain tail 0.002)
+fsync_policy         on_segment_seal
+streams              5
+captured             10801
+recorded             10801
+dropped              0 (0.0000%)
+overwritten          0
+shed_events          0
+msgs_per_sec         358.8
+frame_MB_per_sec     8.517
+wal_MB_per_sec       8.529
+wal_records          10801
+wal_bytes            269230004
+wal_fsyncs           17
+capture_to_record_us p50=365.0 p99=1470.0 p999=5296.0 (n=10801)
+frames_validated     10801
+frames_rejected      0
+crc_failures         0
+sequence_gaps        0 (missing=0)
+decoder_streams      5
+peak_rss_bytes       5603328 (5.3 MiB)
+peak_cpu_percent     13.2
+peak_queued_bytes    429812
+budget_state         ok
+replay_digest        f6480453 (records=10801 bytes=268862770)
+replay_ms            163.768
+replay_frames        ok=10801 bad=0
+recovery_ms          1.206 (segments=17 tail_records=145 truncated=0)
+
+per-stream:
+  stream   type       policy              captured  recorded   dropped    overwr  peak_bytes
+  lidar    lidar      drop_newest              300       300         0         0      196608
+  camera   camera     overwrite_oldest         900       900         0         0      230400
+  imu      imu        drop_newest             6001      6001         0         0        2640
+  gps      gps        drop_newest              600       600         0         0         100
+  can      can        block                   3000      3000         0         0          64
+
+wrote artifacts/e2e_reference_paced.json

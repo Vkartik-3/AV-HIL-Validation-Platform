@@ -1,0 +1,4 @@
+never            wal_MB_per_sec       8.482 wal_fsyncs           0 capture_to_record_us p50=254.0 p99=1042.0 p999=2737.0 (n=3604) 
+on_segment_seal  wal_MB_per_sec       8.494 wal_fsyncs           6 capture_to_record_us p50=258.0 p99=1206.0 p999=4909.0 (n=3605) 
+interval         wal_MB_per_sec       8.492 wal_fsyncs           26 capture_to_record_us p50=259.0 p99=1978.0 p999=2844.0 (n=3604) 
+every_record     wal_MB_per_sec       8.496 wal_fsyncs           3611 capture_to_record_us p50=308.0 p99=1304.0 p999=1819.0 (n=3605) 

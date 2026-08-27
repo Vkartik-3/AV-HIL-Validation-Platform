@@ -1,0 +1,496 @@
+Running main() from /private/tmp/googletest-20250910-5249-qce8ci/googletest-1.17.0/googletest/src/gtest_main.cc
+[==========] Running 198 tests from 31 test suites.
+[----------] Global test environment set-up.
+[----------] 4 tests from Crc32c
+[ RUN      ] Crc32c.KnownVectors
+[       OK ] Crc32c.KnownVectors (0 ms)
+[ RUN      ] Crc32c.DeterministicRepeat
+[       OK ] Crc32c.DeterministicRepeat (3 ms)
+[ RUN      ] Crc32c.SingleBitFlipChangesCrc
+[       OK ] Crc32c.SingleBitFlipChangesCrc (0 ms)
+[ RUN      ] Crc32c.LengthSensitivity
+[       OK ] Crc32c.LengthSensitivity (1 ms)
+[----------] 4 tests from Crc32c (5 ms total)
+
+[----------] 3 tests from FrameValidation
+[ RUN      ] FrameValidation.RejectsBadVersionAndLength
+[       OK ] FrameValidation.RejectsBadVersionAndLength (0 ms)
+[ RUN      ] FrameValidation.EmptyPayloadRoundTrips
+[       OK ] FrameValidation.EmptyPayloadRoundTrips (0 ms)
+[ RUN      ] FrameValidation.MonotonicSequenceAndTimestampAccepted
+[       OK ] FrameValidation.MonotonicSequenceAndTimestampAccepted (0 ms)
+[----------] 3 tests from FrameValidation (0 ms total)
+
+[----------] 4 tests from SpscRing
+[ RUN      ] SpscRing.EmptyAndFull
+[       OK ] SpscRing.EmptyAndFull (0 ms)
+[ RUN      ] SpscRing.FifoOrderAndWraparound
+[       OK ] SpscRing.FifoOrderAndWraparound (3 ms)
+[ RUN      ] SpscRing.OverwriteOldestPolicyHelper
+[       OK ] SpscRing.OverwriteOldestPolicyHelper (0 ms)
+[ RUN      ] SpscRing.ConcurrentProducerConsumerNoLoss
+[       OK ] SpscRing.ConcurrentProducerConsumerNoLoss (23 ms)
+[----------] 4 tests from SpscRing (27 ms total)
+
+[----------] 3 tests from Seqlock
+[ RUN      ] Seqlock.StoreLoadRoundTrip
+[       OK ] Seqlock.StoreLoadRoundTrip (0 ms)
+[ RUN      ] Seqlock.SequenceIsEvenWhenStable
+[       OK ] Seqlock.SequenceIsEvenWhenStable (0 ms)
+[ RUN      ] Seqlock.ConcurrentReadsAreConsistent
+[       OK ] Seqlock.ConcurrentReadsAreConsistent (23685 ms)
+[----------] 3 tests from Seqlock (23686 ms total)
+
+[----------] 1 test from RecordCodec
+[ RUN      ] RecordCodec.CorruptionDetected
+[       OK ] RecordCodec.CorruptionDetected (0 ms)
+[----------] 1 test from RecordCodec (0 ms total)
+
+[----------] 3 tests from Wal
+[ RUN      ] Wal.RoundTripWithRollover
+[       OK ] Wal.RoundTripWithRollover (21 ms)
+[ RUN      ] Wal.DeterministicReplayDeliversAll
+[       OK ] Wal.DeterministicReplayDeliversAll (3 ms)
+[ RUN      ] Wal.CorruptionRecovery
+[       OK ] Wal.CorruptionRecovery (3 ms)
+[----------] 3 tests from Wal (29 ms total)
+
+[----------] 6 tests from Backpressure
+[ RUN      ] Backpressure.DefaultPolicyMapping
+[       OK ] Backpressure.DefaultPolicyMapping (0 ms)
+[ RUN      ] Backpressure.PolicyNamesRoundTrip
+[       OK ] Backpressure.PolicyNamesRoundTrip (0 ms)
+[ RUN      ] Backpressure.DropNewestWhenFull
+[       OK ] Backpressure.DropNewestWhenFull (0 ms)
+[ RUN      ] Backpressure.OverwriteOldestWhenFull
+[       OK ] Backpressure.OverwriteOldestWhenFull (0 ms)
+[ RUN      ] Backpressure.NeverDropBlockEnqueuesWhenSpace
+[       OK ] Backpressure.NeverDropBlockEnqueuesWhenSpace (0 ms)
+[ RUN      ] Backpressure.NeverDropBlockIsBoundedWhenConsumerIsStalled
+[       OK ] Backpressure.NeverDropBlockIsBoundedWhenConsumerIsStalled (1 ms)
+[----------] 6 tests from Backpressure (1 ms total)
+
+[----------] 4 tests from TcpReassembler
+[ RUN      ] TcpReassembler.SingleFrame
+[       OK ] TcpReassembler.SingleFrame (0 ms)
+[ RUN      ] TcpReassembler.ManyFramesArbitraryFragmentation
+[       OK ] TcpReassembler.ManyFramesArbitraryFragmentation (1 ms)
+[ RUN      ] TcpReassembler.ResyncsPastGarbage
+[       OK ] TcpReassembler.ResyncsPastGarbage (0 ms)
+[ RUN      ] TcpReassembler.OversizedLengthRejectedNoCrash
+[       OK ] TcpReassembler.OversizedLengthRejectedNoCrash (0 ms)
+[----------] 4 tests from TcpReassembler (1 ms total)
+
+[----------] 3 tests from ScenarioParser
+[ RUN      ] ScenarioParser.ParsesFullScenario
+[       OK ] ScenarioParser.ParsesFullScenario (1 ms)
+[ RUN      ] ScenarioParser.RejectsMalformed
+[       OK ] ScenarioParser.RejectsMalformed (0 ms)
+[ RUN      ] ScenarioParser.FaultTypeRoundTrip
+[       OK ] ScenarioParser.FaultTypeRoundTrip (0 ms)
+[----------] 3 tests from ScenarioParser (1 ms total)
+
+[----------] 1 test from Assertion
+[ RUN      ] Assertion.MissingMetricFails
+[       OK ] Assertion.MissingMetricFails (0 ms)
+[----------] 1 test from Assertion (0 ms total)
+
+[----------] 4 tests from StreamMetrics
+[ RUN      ] StreamMetrics.DerivesPercentilesAndRates
+[       OK ] StreamMetrics.DerivesPercentilesAndRates (0 ms)
+[ RUN      ] StreamMetrics.DropRateReflectsMissingMessages
+[       OK ] StreamMetrics.DropRateReflectsMissingMessages (0 ms)
+[ RUN      ] StreamMetrics.SteadyStateWindowExcludesStartup
+[       OK ] StreamMetrics.SteadyStateWindowExcludesStartup (0 ms)
+[ RUN      ] StreamMetrics.SteadyStateDetectsRealLoss
+[       OK ] StreamMetrics.SteadyStateDetectsRealLoss (0 ms)
+[----------] 4 tests from StreamMetrics (0 ms total)
+
+[----------] 10 tests from FaultInjection
+[ RUN      ] FaultInjection.NoRulesForwardsEverything
+[       OK ] FaultInjection.NoRulesForwardsEverything (0 ms)
+[ RUN      ] FaultInjection.BurstLossDropsWithinWindowOnly
+[       OK ] FaultInjection.BurstLossDropsWithinWindowOnly (0 ms)
+[ RUN      ] FaultInjection.DropRateApproximate
+[       OK ] FaultInjection.DropRateApproximate (17 ms)
+[ RUN      ] FaultInjection.DuplicateSendsTwice
+[       OK ] FaultInjection.DuplicateSendsTwice (0 ms)
+[ RUN      ] FaultInjection.CorruptChangesBytesButKeepsCount
+[       OK ] FaultInjection.CorruptChangesBytesButKeepsCount (0 ms)
+[ RUN      ] FaultInjection.ReorderSwapsAdjacent
+[       OK ] FaultInjection.ReorderSwapsAdjacent (0 ms)
+[ RUN      ] FaultInjection.DelayHoldsThenReleases
+[       OK ] FaultInjection.DelayHoldsThenReleases (125 ms)
+[ RUN      ] FaultInjection.EcuDisconnectSuppresses
+[       OK ] FaultInjection.EcuDisconnectSuppresses (0 ms)
+[ RUN      ] FaultInjection.ProcessRestartFiresOnce
+[       OK ] FaultInjection.ProcessRestartFiresOnce (0 ms)
+[ RUN      ] FaultInjection.StreamFilterScopesFault
+[       OK ] FaultInjection.StreamFilterScopesFault (0 ms)
+[----------] 10 tests from FaultInjection (144 ms total)
+
+[----------] 3 tests from Report
+[ RUN      ] Report.JsonSchemaMatchesSpec
+[       OK ] Report.JsonSchemaMatchesSpec (1 ms)
+[ RUN      ] Report.FailResultReflected
+[       OK ] Report.FailResultReflected (0 ms)
+[ RUN      ] Report.HtmlIsSelfContained
+[       OK ] Report.HtmlIsSelfContained (0 ms)
+[----------] 3 tests from Report (1 ms total)
+
+[----------] 5 tests from Registry
+[ RUN      ] Registry.GaugeWithLabelRenders
+[       OK ] Registry.GaugeWithLabelRenders (0 ms)
+[ RUN      ] Registry.GaugeIsOverwrittenNotAccumulated
+[       OK ] Registry.GaugeIsOverwrittenNotAccumulated (0 ms)
+[ RUN      ] Registry.CounterAccumulates
+[       OK ] Registry.CounterAccumulates (0 ms)
+[ RUN      ] Registry.MultipleSensorSeries
+[       OK ] Registry.MultipleSensorSeries (0 ms)
+[ RUN      ] Registry.LabelValueEscaped
+[       OK ] Registry.LabelValueEscaped (0 ms)
+[----------] 5 tests from Registry (0 ms total)
+
+[----------] 3 tests from NamespaceManager
+[ RUN      ] NamespaceManager.VendsUniqueNamespaces
+[       OK ] NamespaceManager.VendsUniqueNamespaces (0 ms)
+[ RUN      ] NamespaceManager.MetricsPortsDisabledWhenBaseZero
+[       OK ] NamespaceManager.MetricsPortsDisabledWhenBaseZero (0 ms)
+[ RUN      ] NamespaceManager.MetricsPortsIncrement
+[       OK ] NamespaceManager.MetricsPortsIncrement (0 ms)
+[----------] 3 tests from NamespaceManager (0 ms total)
+
+[----------] 2 tests from Aggregate
+[ RUN      ] Aggregate.CountsScenariosAndChecks
+[       OK ] Aggregate.CountsScenariosAndChecks (0 ms)
+[ RUN      ] Aggregate.AllPassed
+[       OK ] Aggregate.AllPassed (0 ms)
+[----------] 2 tests from Aggregate (0 ms total)
+
+[----------] 7 tests from StreamBuffer
+[ RUN      ] StreamBuffer.FrameLimitIsEnforced
+[       OK ] StreamBuffer.FrameLimitIsEnforced (0 ms)
+[ RUN      ] StreamBuffer.ByteLimitBindsBeforeFrameLimit
+[       OK ] StreamBuffer.ByteLimitBindsBeforeFrameLimit (1 ms)
+[ RUN      ] StreamBuffer.ByteAccountingReturnsToZeroAfterDrain
+[       OK ] StreamBuffer.ByteAccountingReturnsToZeroAfterDrain (0 ms)
+[ RUN      ] StreamBuffer.OverwriteKeepsNewestAndBoundsBytes
+[       OK ] StreamBuffer.OverwriteKeepsNewestAndBoundsBytes (0 ms)
+[ RUN      ] StreamBuffer.BlockPolicyIsBoundedAndDoesNotHang
+[       OK ] StreamBuffer.BlockPolicyIsBoundedAndDoesNotHang (2 ms)
+[ RUN      ] StreamBuffer.ProducerFasterThanConsumerStaysBounded
+[       OK ] StreamBuffer.ProducerFasterThanConsumerStaysBounded (300 ms)
+[ RUN      ] StreamBuffer.MixedPayloadSizesRespectByteCeiling
+[       OK ] StreamBuffer.MixedPayloadSizesRespectByteCeiling (524 ms)
+[----------] 7 tests from StreamBuffer (828 ms total)
+
+[----------] 5 tests from RingOverwrite
+[ RUN      ] RingOverwrite.ReservesTwoSlots
+[       OK ] RingOverwrite.ReservesTwoSlots (0 ms)
+[ RUN      ] RingOverwrite.EvictOldestFreesExactlyOneSlot
+[       OK ] RingOverwrite.EvictOldestFreesExactlyOneSlot (0 ms)
+[ RUN      ] RingOverwrite.EvictOnEmptyReturnsFalse
+[       OK ] RingOverwrite.EvictOnEmptyReturnsFalse (0 ms)
+[ RUN      ] RingOverwrite.PushOverwriteAlwaysAdmitsNewest
+[       OK ] RingOverwrite.PushOverwriteAlwaysAdmitsNewest (0 ms)
+[ RUN      ] RingOverwrite.ConcurrentEvictAndPopStaysConsistent
+[       OK ] RingOverwrite.ConcurrentEvictAndPopStaysConsistent (400 ms)
+[----------] 5 tests from RingOverwrite (400 ms total)
+
+[----------] 9 tests from WalRestart
+[ RUN      ] WalRestart.RestartPreservesAndAppends
+[       OK ] WalRestart.RestartPreservesAndAppends (6 ms)
+[ RUN      ] WalRestart.ReportsRecoveryOnSecondOpen
+[       OK ] WalRestart.ReportsRecoveryOnSecondOpen (0 ms)
+[ RUN      ] WalRestart.FreshDirectoryIsNotReportedAsRecovered
+[       OK ] WalRestart.FreshDirectoryIsNotReportedAsRecovered (0 ms)
+[ RUN      ] WalRestart.TruncatedFinalRecordIsRecovered
+[       OK ] WalRestart.TruncatedFinalRecordIsRecovered (1 ms)
+[ RUN      ] WalRestart.RollsToNextSegmentWhenTailIsFull
+[       OK ] WalRestart.RollsToNextSegmentWhenTailIsFull (2 ms)
+[ RUN      ] WalRestart.FsyncPolicyEveryRecordSyncsPerAppend
+[       OK ] WalRestart.FsyncPolicyEveryRecordSyncsPerAppend (1 ms)
+[ RUN      ] WalRestart.FsyncPolicyNeverDoesNotSync
+[       OK ] WalRestart.FsyncPolicyNeverDoesNotSync (0 ms)
+[ RUN      ] WalRestart.PolicyRoundTripsThroughStrings
+[       OK ] WalRestart.PolicyRoundTripsThroughStrings (0 ms)
+[ RUN      ] WalRestart.SegmentSealedHookFiresOnRollover
+[       OK ] WalRestart.SegmentSealedHookFiresOnRollover (1 ms)
+[----------] 9 tests from WalRestart (15 ms total)
+
+[----------] 8 tests from ReplayDigest
+[ RUN      ] ReplayDigest.SameRecordingYieldsSameDigest
+[       OK ] ReplayDigest.SameRecordingYieldsSameDigest (16 ms)
+[ RUN      ] ReplayDigest.DifferentContentYieldsDifferentDigest
+[       OK ] ReplayDigest.DifferentContentYieldsDifferentDigest (13 ms)
+[ RUN      ] ReplayDigest.SingleByteChangeChangesDigest
+[       OK ] ReplayDigest.SingleByteChangeChangesDigest (3 ms)
+[ RUN      ] ReplayDigest.StreamingMatchesLoadingReader
+[       OK ] ReplayDigest.StreamingMatchesLoadingReader (14 ms)
+[ RUN      ] ReplayDigest.ReplayedRecordsRevalidateAsFrames
+[       OK ] ReplayDigest.ReplayedRecordsRevalidateAsFrames (5 ms)
+[ RUN      ] ReplayDigest.StartTimestampSeeksForward
+[       OK ] ReplayDigest.StartTimestampSeeksForward (4 ms)
+[ RUN      ] ReplayDigest.EmptyDirectoryIsHandled
+[       OK ] ReplayDigest.EmptyDirectoryIsHandled (0 ms)
+[ RUN      ] ReplayDigest.DigestIsStableAcrossWriterRestart
+[       OK ] ReplayDigest.DigestIsStableAcrossWriterRestart (4 ms)
+[----------] 8 tests from ReplayDigest (62 ms total)
+
+[----------] 8 tests from SequenceIntegrity
+[ RUN      ] SequenceIntegrity.BackwardsClockStepDoesNotWedgeTheLink
+[       OK ] SequenceIntegrity.BackwardsClockStepDoesNotWedgeTheLink (0 ms)
+[ RUN      ] SequenceIntegrity.MissingSequenceRangeIsCounted
+[       OK ] SequenceIntegrity.MissingSequenceRangeIsCounted (0 ms)
+[ RUN      ] SequenceIntegrity.NoGapsReportedOnContiguousStream
+[       OK ] SequenceIntegrity.NoGapsReportedOnContiguousStream (1 ms)
+[ RUN      ] SequenceIntegrity.InterleavedTopicsTrackIndependently
+[       OK ] SequenceIntegrity.InterleavedTopicsTrackIndependently (0 ms)
+[ RUN      ] SequenceIntegrity.PeerRestartResyncsInsteadOfWedging
+[       OK ] SequenceIntegrity.PeerRestartResyncsInsteadOfWedging (0 ms)
+[ RUN      ] SequenceIntegrity.IsolatedReorderIsStillRejected
+[       OK ] SequenceIntegrity.IsolatedReorderIsStillRejected (0 ms)
+[ RUN      ] SequenceIntegrity.DecoderStateIsBounded
+[       OK ] SequenceIntegrity.DecoderStateIsBounded (3 ms)
+[ RUN      ] SequenceIntegrity.ResetClearsHistory
+[       OK ] SequenceIntegrity.ResetClearsHistory (0 ms)
+[----------] 8 tests from SequenceIntegrity (4 ms total)
+
+[----------] 2 tests from MonotonicWallClockTest
+[ RUN      ] MonotonicWallClockTest.NeverRegressesAndCountsClockSteps
+[       OK ] MonotonicWallClockTest.NeverRegressesAndCountsClockSteps (0 ms)
+[ RUN      ] MonotonicWallClockTest.StampsAreAcceptedByTheDecoder
+[       OK ] MonotonicWallClockTest.StampsAreAcceptedByTheDecoder (0 ms)
+[----------] 2 tests from MonotonicWallClockTest (0 ms total)
+
+[----------] 8 tests from RecorderTest
+[ RUN      ] RecorderTest.MultiStreamCaptureReachesWalAsValidFrames
+[       OK ] RecorderTest.MultiStreamCaptureReachesWalAsValidFrames (6 ms)
+[ RUN      ] RecorderTest.EachStreamHasIndependentSequence
+[       OK ] RecorderTest.EachStreamHasIndependentSequence (1 ms)
+[ RUN      ] RecorderTest.SensorTypeSelectsDefaultPolicy
+[       OK ] RecorderTest.SensorTypeSelectsDefaultPolicy (0 ms)
+[ RUN      ] RecorderTest.ByteBudgetHardBreachSheds
+[       OK ] RecorderTest.ByteBudgetHardBreachSheds (6 ms)
+[ RUN      ] RecorderTest.NoWalDirStillFramesAndSinks
+[       OK ] RecorderTest.NoWalDirStillFramesAndSinks (0 ms)
+[ RUN      ] RecorderTest.LatencyIsMeasuredForRecordedFrames
+[       OK ] RecorderTest.LatencyIsMeasuredForRecordedFrames (2 ms)
+[ RUN      ] RecorderTest.ConcurrentProducersPerStream
+[       OK ] RecorderTest.ConcurrentProducersPerStream (7 ms)
+[ RUN      ] RecorderTest.RestartAppendsRatherThanTruncating
+[       OK ] RecorderTest.RestartAppendsRatherThanTruncating (2 ms)
+[----------] 8 tests from RecorderTest (26 ms total)
+
+[----------] 8 tests from RecordingPolicyTest
+[ RUN      ] RecordingPolicyTest.EmptyPolicyAllowsEverything
+[       OK ] RecordingPolicyTest.EmptyPolicyAllowsEverything (0 ms)
+[ RUN      ] RecordingPolicyTest.DenylistBlocks
+[       OK ] RecordingPolicyTest.DenylistBlocks (0 ms)
+[ RUN      ] RecordingPolicyTest.AllowlistExcludesEverythingElse
+[       OK ] RecordingPolicyTest.AllowlistExcludesEverythingElse (0 ms)
+[ RUN      ] RecordingPolicyTest.DenyBeatsAllow
+[       OK ] RecordingPolicyTest.DenyBeatsAllow (0 ms)
+[ RUN      ] RecordingPolicyTest.PrefixWildcardMatches
+[       OK ] RecordingPolicyTest.PrefixWildcardMatches (0 ms)
+[ RUN      ] RecordingPolicyTest.MetadataOnlyIsDistinctFromDeny
+[       OK ] RecordingPolicyTest.MetadataOnlyIsDistinctFromDeny (0 ms)
+[ RUN      ] RecordingPolicyTest.DeniedStreamNeverReachesWal
+[       OK ] RecordingPolicyTest.DeniedStreamNeverReachesWal (1 ms)
+[ RUN      ] RecordingPolicyTest.MetadataOnlyRecordsHeaderWithoutPayload
+[       OK ] RecordingPolicyTest.MetadataOnlyRecordsHeaderWithoutPayload (0 ms)
+[----------] 8 tests from RecordingPolicyTest (1 ms total)
+
+[----------] 9 tests from TriggerTest
+[ RUN      ] TriggerTest.PreRollIsBoundedByBytes
+[       OK ] TriggerTest.PreRollIsBoundedByBytes (3 ms)
+[ RUN      ] TriggerTest.PreRollIsBoundedByFrames
+[       OK ] TriggerTest.PreRollIsBoundedByFrames (0 ms)
+[ RUN      ] TriggerTest.PreRollKeepsNewestOnEviction
+[       OK ] TriggerTest.PreRollKeepsNewestOnEviction (0 ms)
+[ RUN      ] TriggerTest.TakePreRollEmptiesTheBuffer
+[       OK ] TriggerTest.TakePreRollEmptiesTheBuffer (0 ms)
+[ RUN      ] TriggerTest.WindowOpensAndCloses
+[       OK ] TriggerTest.WindowOpensAndCloses (0 ms)
+[ RUN      ] TriggerTest.OverlappingTriggersExtendDeterministically
+[       OK ] TriggerTest.OverlappingTriggersExtendDeterministically (0 ms)
+[ RUN      ] TriggerTest.LateTriggerNeverShortensAnOpenWindow
+[       OK ] TriggerTest.LateTriggerNeverShortensAnOpenWindow (0 ms)
+[ RUN      ] TriggerTest.ExpireDropsEntriesOlderThanPreRollHorizon
+[       OK ] TriggerTest.ExpireDropsEntriesOlderThanPreRollHorizon (0 ms)
+[ RUN      ] TriggerTest.SelectiveRecordingSavesBytesAndRecoversPreRoll
+[       OK ] TriggerTest.SelectiveRecordingSavesBytesAndRecoversPreRoll (57 ms)
+[----------] 9 tests from TriggerTest (61 ms total)
+
+[----------] 8 tests from OffloadTest
+[ RUN      ] OffloadTest.FilesystemDestinationPublishesAtomically
+[       OK ] OffloadTest.FilesystemDestinationPublishesAtomically (0 ms)
+[ RUN      ] OffloadTest.SealedSegmentsAreUploaded
+[       OK ] OffloadTest.SealedSegmentsAreUploaded (12 ms)
+[ RUN      ] OffloadTest.RecordingContinuesWhileDestinationIsDownThenDrains
+[       OK ] OffloadTest.RecordingContinuesWhileDestinationIsDownThenDrains (19 ms)
+[ RUN      ] OffloadTest.RestartRecoversPendingSegments
+[       OK ] OffloadTest.RestartRecoversPendingSegments (74 ms)
+[ RUN      ] OffloadTest.AlreadyUploadedSegmentIsNotDuplicated
+[       OK ] OffloadTest.AlreadyUploadedSegmentIsNotDuplicated (12 ms)
+[ RUN      ] OffloadTest.QueueIsBoundedAndRejectsRatherThanGrows
+[       OK ] OffloadTest.QueueIsBoundedAndRejectsRatherThanGrows (0 ms)
+[ RUN      ] OffloadTest.LocalSegmentSurvivesUntilAcknowledged
+[       OK ] OffloadTest.LocalSegmentSurvivesUntilAcknowledged (90 ms)
+[ RUN      ] OffloadTest.MaxAttemptsMarksFailedAndStopsRetrying
+[       OK ] OffloadTest.MaxAttemptsMarksFailedAndStopsRetrying (7 ms)
+[----------] 8 tests from OffloadTest (216 ms total)
+
+[----------] 8 tests from ResourceMonitorTest
+[ RUN      ] ResourceMonitorTest.SamplerReportsPlausibleRss
+[       OK ] ResourceMonitorTest.SamplerReportsPlausibleRss (0 ms)
+[ RUN      ] ResourceMonitorTest.RssTracksAnAllocation
+[       OK ] ResourceMonitorTest.RssTracksAnAllocation (429 ms)
+[ RUN      ] ResourceMonitorTest.CpuPercentIsNonNegative
+[       OK ] ResourceMonitorTest.CpuPercentIsNonNegative (2 ms)
+[ RUN      ] ResourceMonitorTest.UnsetBudgetNeverBreaches
+[       OK ] ResourceMonitorTest.UnsetBudgetNeverBreaches (0 ms)
+[ RUN      ] ResourceMonitorTest.SoftAndHardBudgetsEvaluate
+[       OK ] ResourceMonitorTest.SoftAndHardBudgetsEvaluate (0 ms)
+[ RUN      ] ResourceMonitorTest.RssBudgetEvaluatesIndependently
+[       OK ] ResourceMonitorTest.RssBudgetEvaluatesIndependently (0 ms)
+[ RUN      ] ResourceMonitorTest.HardBeatsSoftWhenBothBreached
+[       OK ] ResourceMonitorTest.HardBeatsSoftWhenBothBreached (0 ms)
+[ RUN      ] ResourceMonitorTest.PlatformNameIsReported
+[       OK ] ResourceMonitorTest.PlatformNameIsReported (0 ms)
+[----------] 8 tests from ResourceMonitorTest (432 ms total)
+
+[----------] 25 tests from Sizes/FrameRoundTrip
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/0
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/0 (0 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/1
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/1 (0 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/2
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/2 (0 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/3
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/3 (0 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/4
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/4 (0 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/5
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/5 (0 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/6
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/6 (0 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/7
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/7 (0 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/8
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/8 (0 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/9
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/9 (0 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/10
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/10 (0 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/11
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/11 (0 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/12
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/12 (0 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/13
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/13 (0 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/14
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/14 (0 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/15
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/15 (2 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/16
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/16 (2 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/17
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/17 (2 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/18
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/18 (2 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/19
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/19 (2 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/20
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/20 (45 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/21
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/21 (45 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/22
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/22 (45 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/23
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/23 (45 ms)
+[ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/24
+[       OK ] Sizes/FrameRoundTrip.EncodesAndDecodes/24 (45 ms)
+[----------] 25 tests from Sizes/FrameRoundTrip (241 ms total)
+
+[----------] 25 tests from Modes/FrameCorruption
+[ RUN      ] Modes/FrameCorruption.Detected/0
+[       OK ] Modes/FrameCorruption.Detected/0 (0 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/1
+[       OK ] Modes/FrameCorruption.Detected/1 (0 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/2
+[       OK ] Modes/FrameCorruption.Detected/2 (0 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/3
+[       OK ] Modes/FrameCorruption.Detected/3 (0 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/4
+[       OK ] Modes/FrameCorruption.Detected/4 (0 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/5
+[       OK ] Modes/FrameCorruption.Detected/5 (0 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/6
+[       OK ] Modes/FrameCorruption.Detected/6 (0 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/7
+[       OK ] Modes/FrameCorruption.Detected/7 (0 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/8
+[       OK ] Modes/FrameCorruption.Detected/8 (0 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/9
+[       OK ] Modes/FrameCorruption.Detected/9 (0 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/10
+[       OK ] Modes/FrameCorruption.Detected/10 (0 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/11
+[       OK ] Modes/FrameCorruption.Detected/11 (0 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/12
+[       OK ] Modes/FrameCorruption.Detected/12 (0 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/13
+[       OK ] Modes/FrameCorruption.Detected/13 (0 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/14
+[       OK ] Modes/FrameCorruption.Detected/14 (0 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/15
+[       OK ] Modes/FrameCorruption.Detected/15 (18 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/16
+[       OK ] Modes/FrameCorruption.Detected/16 (18 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/17
+[       OK ] Modes/FrameCorruption.Detected/17 (17 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/18
+[       OK ] Modes/FrameCorruption.Detected/18 (18 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/19
+[       OK ] Modes/FrameCorruption.Detected/19 (53 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/20
+[       OK ] Modes/FrameCorruption.Detected/20 (299 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/21
+[       OK ] Modes/FrameCorruption.Detected/21 (288 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/22
+[       OK ] Modes/FrameCorruption.Detected/22 (287 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/23
+[       OK ] Modes/FrameCorruption.Detected/23 (301 ms)
+[ RUN      ] Modes/FrameCorruption.Detected/24
+[       OK ] Modes/FrameCorruption.Detected/24 (857 ms)
+[----------] 25 tests from Modes/FrameCorruption (2165 ms total)
+
+[----------] 5 tests from Sizes/RecordRoundTrip
+[ RUN      ] Sizes/RecordRoundTrip.EncodeDecode/0
+[       OK ] Sizes/RecordRoundTrip.EncodeDecode/0 (0 ms)
+[ RUN      ] Sizes/RecordRoundTrip.EncodeDecode/1
+[       OK ] Sizes/RecordRoundTrip.EncodeDecode/1 (0 ms)
+[ RUN      ] Sizes/RecordRoundTrip.EncodeDecode/2
+[       OK ] Sizes/RecordRoundTrip.EncodeDecode/2 (0 ms)
+[ RUN      ] Sizes/RecordRoundTrip.EncodeDecode/3
+[       OK ] Sizes/RecordRoundTrip.EncodeDecode/3 (2 ms)
+[ RUN      ] Sizes/RecordRoundTrip.EncodeDecode/4
+[       OK ] Sizes/RecordRoundTrip.EncodeDecode/4 (39 ms)
+[----------] 5 tests from Sizes/RecordRoundTrip (42 ms total)
+
+[----------] 4 tests from AllOps/AssertionOps
+[ RUN      ] AllOps/AssertionOps.EvaluatesCorrectly/0
+[       OK ] AllOps/AssertionOps.EvaluatesCorrectly/0 (0 ms)
+[ RUN      ] AllOps/AssertionOps.EvaluatesCorrectly/1
+[       OK ] AllOps/AssertionOps.EvaluatesCorrectly/1 (0 ms)
+[ RUN      ] AllOps/AssertionOps.EvaluatesCorrectly/2
+[       OK ] AllOps/AssertionOps.EvaluatesCorrectly/2 (0 ms)
+[ RUN      ] AllOps/AssertionOps.EvaluatesCorrectly/3
+[       OK ] AllOps/AssertionOps.EvaluatesCorrectly/3 (0 ms)
+[----------] 4 tests from AllOps/AssertionOps (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 198 tests from 31 test suites ran. (28401 ms total)
+[  PASSED  ] 198 tests.
+[ASSERTIONS] total=101197 passed=101197 failed=0

@@ -81,4 +81,46 @@ private:
   ReplayStats stats_;
 };
 
+
+/**
+ * @brief Streaming replay: process one segment at a time, never holding the
+ *        whole recording in memory.
+ *
+ * WalReader::load() materialises every record into a vector before anything can
+ * be replayed, so a multi-segment recording costs its full size in RAM. This
+ * path reads one segment, delivers its records, then frees it -- peak memory is
+ * one segment plus one record. It carries the same per-record CRC validation
+ * and the same corruption resync as load().
+ *
+ * ORDERING NOTE: records are delivered in (segment id, file offset) order,
+ * which equals capture order for a single writer -- the only writer topology
+ * this WAL supports. load() additionally sorts globally by timestamp; for a
+ * single writer the two orders agree. If a future multi-writer topology is
+ * added, this function would need a merge step.
+ */
+ReplayStats stream_replay(
+  const std::string & dir,
+  const std::function<void (const ReplayRecord &)> & cb,
+  ReplayMode mode = ReplayMode::kDeterministic,
+  double speed = 1.0,
+  uint64_t start_ns = 0);
+
+/**
+ * @brief Order-sensitive digest of a replay, for record/replay regression tests.
+ *
+ * CRC32C chained over each delivered record's (timestamp_ns, sensor_type,
+ * sequence, payload bytes) in delivery order. Two replays of the same intact
+ * recording produce the same digest; any change to content, ordering or record
+ * count changes it.
+ */
+struct ReplayDigest
+{
+  uint32_t digest = 0;
+  uint64_t records = 0;
+  uint64_t payload_bytes = 0;
+  ReplayStats stats;
+};
+
+ReplayDigest compute_replay_digest(const std::string & dir, uint64_t start_ns = 0);
+
 }  // namespace sensorforge::replay

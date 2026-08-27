@@ -119,6 +119,36 @@ inline std::string_view to_string(FrameError e)
   return "unknown";
 }
 
+/// Parse a sensor type from a config string (used by the bridge's per-topic
+/// `sensor_type` parameter). Unknown values fall back to control traffic.
+inline SensorType sensor_type_from_string(std::string_view s)
+{
+  if (s == "lidar") {return SensorType::kLidar;}
+  if (s == "camera") {return SensorType::kCamera;}
+  if (s == "imu") {return SensorType::kImu;}
+  if (s == "gps") {return SensorType::kGps;}
+  if (s == "can") {return SensorType::kCan;}
+  if (s == "ctrl" || s == "control") {return SensorType::kControl;}
+  return SensorType::kControl;
+}
+
+/**
+ * @brief Read the sensor_type field from a raw buffer WITHOUT validating it.
+ *
+ * Used only to pick a decoder stream key before validation. Returns kUnknown
+ * for anything too short to contain the field, so it is safe on arbitrary
+ * bytes; the real validation still happens in decode_header().
+ */
+inline uint16_t get_sensor_type_hint(const uint8_t * data, size_t size)
+{
+  constexpr size_t kOffSensorType = 6;
+  if (data == nullptr || size < kOffSensorType + 2) {
+    return 0;
+  }
+  return static_cast<uint16_t>(data[kOffSensorType]) |
+         (static_cast<uint16_t>(data[kOffSensorType + 1]) << 8);
+}
+
 inline std::string_view to_string(SensorType t)
 {
   switch (t) {

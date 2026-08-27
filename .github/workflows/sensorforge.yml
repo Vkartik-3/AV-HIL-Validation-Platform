@@ -70,6 +70,15 @@ jobs:
           ./build/spsc_tsan_stress | tee tsan.txt
           grep -q 'ThreadSanitizer' tsan.txt && { echo "FAIL: data race"; exit 1; } || true
           grep -q 'PASS: no corruption' tsan.txt || { echo "FAIL: corruption"; exit 1; }
+          # The overwrite/eviction path was the one racy method TSan never ran.
+          # Fail if this run did not actually exercise it.
+          evicted=$(grep -oE 'evicted=[0-9]+' tsan.txt | grep -oE '[0-9]+')
+          echo "overwrite evictions under TSan: $evicted"
+          test "${evicted:-0}" -gt 0 || { echo "FAIL: overwrite path not exercised"; exit 1; }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tsan-stress
+          path: tsan.txt
 
   # 4. libFuzzer smoke: each harness must survive 1000 iterations clean.
   fuzz-smoke:
@@ -139,7 +148,65 @@ jobs:
           name: benchmark-results
           path: benchmark_results.txt
 
-  # 6. Plain non-ROS CMake configure/build of the core (no tests/deps).
+  # 6. Deterministic record/replay regression + the end-to-end reference
+  #    workload. This is the job that proves sensor data actually traverses the
+  #    SensorForge core (buffer -> frame -> CRC -> WAL -> replay) and that a
+  #    recording replays to a stable digest.
+  e2e-replay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y cmake g++
+      - name: Build (Release)
+        run: |
+          cmake -S standalone -B build -DCMAKE_BUILD_TYPE=Release \
+            -DSENSORFORGE_BUILD_TESTS=OFF -DSENSORFORGE_BUILD_STRESS=OFF
+          cmake --build build -j
+      - name: End-to-end reference workload
+        run: |
+          ./build/e2e_reference --duration 20 --json e2e_paced.json | tee e2e_paced.txt
+          ./build/e2e_reference --duration 10 --saturate --json e2e_saturate.json \
+            | tee e2e_saturate.txt
+      - name: Deterministic record/replay regression
+        run: |
+          rm -rf /tmp/sf_ci_wal
+          ./build/e2e_reference --duration 8 --wal-dir /tmp/sf_ci_wal --keep > /dev/null
+          ./build/wal_replay --dir /tmp/sf_ci_wal --digest --verify | tee r1.txt
+          ./build/wal_replay --dir /tmp/sf_ci_wal --digest --verify | tee r2.txt
+          d1=$(grep -oE 'digest=[0-9a-f]+' r1.txt)
+          d2=$(grep -oE 'digest=[0-9a-f]+' r2.txt)
+          echo "run1=$d1 run2=$d2"
+          test -n "$d1" || { echo "FAIL: no digest"; exit 1; }
+          test "$d1" = "$d2" || { echo "FAIL: replay is not deterministic"; exit 1; }
+          grep -q 'bad=0' r1.txt || { echo "FAIL: replayed frames failed validation"; exit 1; }
+      - name: WAL restart/recovery integration (kill -9)
+        run: |
+          # A hard kill mid-append leaves a torn tail. The next open must
+          # discard exactly that partial record and preserve everything else.
+          rm -rf /tmp/sf_kill_wal
+          ./build/e2e_reference --duration 6 --wal-dir /tmp/sf_kill_wal --keep > /dev/null &
+          pid=$!
+          sleep 3
+          kill -9 $pid || true
+          wait $pid 2>/dev/null || true
+          ./build/wal_replay --dir /tmp/sf_kill_wal --digest --verify | tee killed.txt
+          grep -q 'bad=0' killed.txt || { echo "FAIL: survivors did not validate"; exit 1; }
+          n=$(grep -oE 'records=[0-9]+' killed.txt | grep -oE '[0-9]+')
+          echo "records surviving kill -9: $n"
+          test "${n:-0}" -gt 0 || { echo "FAIL: no records survived"; exit 1; }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e2e-reference
+          path: |
+            e2e_paced.json
+            e2e_paced.txt
+            e2e_saturate.json
+            e2e_saturate.txt
+            r1.txt
+            killed.txt
+
+  # 7. Plain non-ROS CMake configure/build of the core (no tests/deps).
   cmake-plain:
     runs-on: ubuntu-latest
     steps:
@@ -152,8 +219,9 @@ jobs:
             -DSENSORFORGE_BUILD_STRESS=OFF
           cmake --build build -j
 
-  # 7. ROS2 bridge integration build (validates the ament/colcon package).
-  #    Headless scenario-regression tests are added in Phase 3 (Extension J/P).
+  # 8. ROS2 bridge integration build + launch tests. The audit found this job
+  #    built but never TESTED, so the two launch tests registered in CMake never
+  #    ran anywhere. `colcon test` now runs them.
   ros-humble:
     runs-on: ubuntu-latest
     container: ros:humble-ros-base
@@ -172,3 +240,9 @@ jobs:
           source /opt/ros/humble/setup.bash
           colcon build --packages-select network_bridge \
             --cmake-args -DCMAKE_BUILD_TYPE=Release
+      - name: colcon test (launch tests + gtest suite)
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon test --packages-select network_bridge --return-code-on-test-failure
+          colcon test-result --all --verbose

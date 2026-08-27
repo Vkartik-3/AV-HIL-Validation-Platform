@@ -1,0 +1,3 @@
+[REPLAY] digest=e47c19c7 records=2886 payload_bytes=72124664
+[REPLAY] dir=/private/tmp/claude-501/-Users-kartikvadhawana-Desktop-gm-project-network-bridge/744dc729-0a2b-4f41-bb2f-9a95e6741c20/scratchpad/final_wal mode=deterministic delivered=2886 segments=5 corrupt_skipped=0 bytes_skipped=0 payload_bytes=72124664 elapsed_ms=59.270
+[REPLAY] frame_verify ok=2886 bad=0

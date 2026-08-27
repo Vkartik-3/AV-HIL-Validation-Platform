@@ -36,9 +36,13 @@ SOFTWARE.
 
 #include "network_bridge/subscription_manager.hpp"
 #include "network_interfaces/network_interface_base.hpp"
+#include "sensorforge/core/clock.hpp"
+#include "sensorforge/core/resource_monitor.hpp"
 #include "sensorforge/protocol/frame_codec.hpp"
 #include "sensorforge/replay/wal_writer.hpp"
 #include "faults/fault_engine.hpp"
+#include "metrics/registry.hpp"
+#include "metrics/prometheus_exporter.hpp"
 
 /**
  * @class NetworkBridge
@@ -104,6 +108,19 @@ protected:
 
 
   void check_network_health();
+
+  /**
+   * @brief Refresh the Prometheus registry from the live counters.
+   *
+   * Runs on a 1 Hz timer, NOT on the per-message path: the registry is
+   * mutex-guarded, so updating it per message would serialize producers. The
+   * hot path only touches lock-free counters; this samples them.
+   */
+  void update_metrics();
+
+  /// One structured JSON log line per notable event (rejects, state changes).
+  /// Deliberately not called per message.
+  void log_event(const char * event, const std::string & fields);
   /**
    * @brief Creates the inner (per-message) header carried inside a frame payload.
    *
@@ -213,8 +230,20 @@ protected:
   uint64_t tx_sequence_ = 0;
 
   /**
-   * @brief Stateful frame decoder enforcing monotonic sequence/timestamp on
-   *        the single inbound link (stream key 0).
+   * @brief Emits monotonised wall-clock stamps for the outbound link.
+   *
+   * The audit found the bridge stamped raw system_clock while the receiver
+   * REJECTED any backwards timestamp, so one NTP step backwards wedged the link
+   * permanently. This guarantees the emitted value never regresses.
+   */
+  sensorforge::core::MonotonicWallClock tx_clock_;
+
+  /**
+   * @brief Stateful frame decoder tracking per-stream sequence integrity.
+   *
+   * Keyed PER TOPIC (see receive_data). The audit found it used a constant
+   * stream key of 0 for every topic multiplexed onto the link, which made
+   * per-topic sequence gaps unobservable.
    */
   sensorforge::protocol::FrameDecoder frame_decoder_;
 
@@ -240,4 +269,19 @@ protected:
 
   /// Node start time, used to compute scenario-relative fault windows.
   std::chrono::steady_clock::time_point node_start_ = std::chrono::steady_clock::now();
+
+  // ---- observability (Prometheus + resource budget) -----------------------
+  // The audit found the exporter was only ever attached to ScenarioRunner, so
+  // the component that actually owns the ring, the frames, the CRCs and the WAL
+  // exported nothing at all.
+  sensorforge::metrics::Registry registry_;
+  std::unique_ptr<sensorforge::metrics::PrometheusExporter> exporter_;
+  rclcpp::TimerBase::SharedPtr metrics_timer_;
+  sensorforge::core::ResourceSampler sampler_;
+  sensorforge::core::ResourceBudget budget_;
+  uint64_t peak_rss_bytes_ = 0;
+  uint64_t shed_events_ = 0;
+  uint64_t frames_sent_ = 0;
+  uint64_t frame_bytes_sent_ = 0;
+  bool structured_logging_ = false;
 };

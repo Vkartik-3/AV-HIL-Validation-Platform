@@ -32,9 +32,9 @@ SOFTWARE.
 #include <cstdint>
 #include <rclcpp/rclcpp.hpp>
 
-#include "sensorforge/core/spsc_ring.hpp"
+#include "sensorforge/core/clock.hpp"
 #include "sensorforge/core/sensor_frame.hpp"
-#include "sensorforge/core/backpressure_policy.hpp"
+#include "sensorforge/core/stream_buffer.hpp"
 #include "sensorforge/protocol/frame.hpp"
 
 /**
@@ -150,22 +150,46 @@ public:
    */
   int zstd_compression_level_;
 
-  /// Compile-time ring capacity per stream (power of two).
+  /// Compile-time slot capacity per stream (power of two). The USABLE limits
+  /// are runtime values on StreamLimits -- see set_stream_limits().
   static constexpr size_t kRingCapacity = 1024;
 
-  /// Set the sensor type (selects the default backpressure policy). Defaults
-  /// to kControl for the generic bridge; dedicated sensor publishers override.
+  /**
+   * @brief Set the sensor type, which selects the default backpressure policy.
+   *
+   * The audit found this was never called by anything except the constructor's
+   * own default, so every bridged stream silently used kControl/drop-newest and
+   * the per-sensor policy table was dead in production. NetworkBridge now calls
+   * it from a per-topic `sensor_type` parameter.
+   */
   void set_sensor_type(sensorforge::protocol::SensorType t)
   {
     sensor_type_ = t;
     policy_ = sensorforge::core::default_policy_for(t);
+    buffer_.configure(policy_, limits_);
   }
 
-  /// Producer/consumer counters for metrics (approximate, lock-free).
-  uint64_t enqueued_count() const {return enqueued_count_;}
-  uint64_t dropped_count() const {return dropped_count_;}
-  uint64_t overwritten_count() const {return overwritten_count_;}
-  size_t ring_occupancy() const {return ring_.size_approx();}
+  /// Runtime per-stream limits (frames AND bytes). The byte ceiling is what
+  /// the old count-only ring lacked: 1024 slots of 4 MiB payload was a 4 GB
+  /// "bounded" buffer.
+  void set_stream_limits(const sensorforge::core::StreamLimits & l)
+  {
+    limits_ = l;
+    buffer_.configure(policy_, limits_);
+  }
+
+  sensorforge::protocol::SensorType sensor_type() const {return sensor_type_;}
+  const char * policy_name() const {return sensorforge::core::to_string(policy_);}
+
+  /// Per-stream counters. These are now READ by NetworkBridge's metrics timer;
+  /// the audit found every one of these accessors had zero callers.
+  sensorforge::core::StreamCounters counters() const {return buffer_.counters();}
+  uint64_t enqueued_count() const {return buffer_.counters().enqueued;}
+  uint64_t dropped_count() const {return buffer_.counters().dropped;}
+  uint64_t overwritten_count() const {return buffer_.counters().overwritten;}
+  size_t ring_occupancy() const {return buffer_.queued_frames();}
+  size_t queued_bytes() const {return buffer_.queued_bytes();}
+  uint64_t clock_regressions() const {return clock_.regressions();}
 
 protected:
   bool topic_found_;
@@ -190,13 +214,20 @@ protected:
   rclcpp::GenericSubscription::SharedPtr subscriber;
 
   /**
-   * @brief Lock-free SPSC ring holding captured frames.
+   * @brief Bounded per-stream buffer holding captured frames.
    *
    * Producer: the ROS2 subscription callback thread (callback()).
    * Consumer: the send-timer thread (get_data()).
-   * Replaces the previous single-slot data_ buffer.
+   * Bounded by BOTH frame count and total queued bytes, under this stream's
+   * backpressure policy.
    */
-  sensorforge::core::SPSCRing<sensorforge::core::SensorFrame, kRingCapacity> ring_;
+  sensorforge::core::StreamBufferT<kRingCapacity> buffer_;
+
+  /// Emits wall-clock stamps that never regress, so an NTP step backwards
+  /// cannot make the receiver reject the link (see core/clock.hpp).
+  sensorforge::core::MonotonicWallClock clock_;
+
+  sensorforge::core::StreamLimits limits_{};
 
   /**
    * @brief The most recently popped frame. get_data() returns a reference into
@@ -213,9 +244,4 @@ protected:
     sensorforge::protocol::SensorType::kControl;
   sensorforge::core::BackpressurePolicy policy_ =
     sensorforge::core::BackpressurePolicy::kDropNewest;
-
-  /// Metrics counters (single-writer each; read approximately elsewhere).
-  uint64_t enqueued_count_ = 0;
-  uint64_t dropped_count_ = 0;
-  uint64_t overwritten_count_ = 0;
 };

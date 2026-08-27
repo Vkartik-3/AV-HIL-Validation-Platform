@@ -102,9 +102,51 @@ void NetworkBridge::load_parameters()
   this->declare_parameter("wal_record_dir", "");
   this->get_parameter("wal_record_dir", wal_record_dir);
   if (!wal_record_dir.empty()) {
-    wal_writer_ = std::make_unique<sensorforge::replay::WalWriter>(wal_record_dir);
+    sensorforge::replay::WalConfig wal_cfg;
+    wal_cfg.segment_bytes = static_cast<size_t>(
+      this->declare_parameter<int64_t>("wal_segment_bytes", 64 * 1024 * 1024));
+    wal_cfg.fsync_policy = sensorforge::replay::fsync_policy_from_string(
+      this->declare_parameter<std::string>("wal_fsync_policy", "on_segment_seal"));
+    wal_cfg.fsync_interval_ms = static_cast<uint32_t>(
+      this->declare_parameter<int64_t>("wal_fsync_interval_ms", 1000));
+    wal_writer_ = std::make_unique<sensorforge::replay::WalWriter>(wal_record_dir, wal_cfg);
+    const auto & rec = wal_writer_->recovery();
     RCLCPP_INFO(
-      this->get_logger(), "Recording WAL replay log to %s", wal_record_dir.c_str());
+      this->get_logger(),
+      "Recording WAL to %s (fsync=%s). Recovery: segments=%u resumed_segment=%u "
+      "tail_records=%llu truncated_bytes=%llu",
+      wal_record_dir.c_str(), sensorforge::replay::to_string(wal_cfg.fsync_policy),
+      rec.segments_found, rec.resumed_segment_id,
+      static_cast<unsigned long long>(rec.valid_records_in_tail),
+      static_cast<unsigned long long>(rec.truncated_bytes));
+  }
+
+  // Optional Prometheus exporter for the BRIDGE itself (0 = disabled).
+  const int metrics_port = static_cast<int>(
+    this->declare_parameter<int64_t>("metrics_port", 0));
+  structured_logging_ = this->declare_parameter<bool>("structured_logging", false);
+  budget_.soft_rss_bytes = static_cast<uint64_t>(
+    this->declare_parameter<int64_t>("budget_soft_rss_bytes", 0));
+  budget_.hard_rss_bytes = static_cast<uint64_t>(
+    this->declare_parameter<int64_t>("budget_hard_rss_bytes", 0));
+  budget_.soft_queue_bytes = static_cast<uint64_t>(
+    this->declare_parameter<int64_t>("budget_soft_queue_bytes", 0));
+  budget_.hard_queue_bytes = static_cast<uint64_t>(
+    this->declare_parameter<int64_t>("budget_hard_queue_bytes", 0));
+
+  if (metrics_port > 0) {
+    registry_.set_help("sensorforge_bridge_queued_bytes", "Bytes queued per stream");
+    registry_.set_help("sensorforge_bridge_dropped_total", "Frames dropped per stream");
+    exporter_ = std::make_unique<sensorforge::metrics::PrometheusExporter>(
+      registry_, static_cast<uint16_t>(metrics_port));
+    if (exporter_->start()) {
+      RCLCPP_INFO(this->get_logger(), "Bridge Prometheus /metrics on :%d", metrics_port);
+      metrics_timer_ = this->create_wall_timer(
+        std::chrono::seconds(1), [this]() {update_metrics();});
+    } else {
+      RCLCPP_WARN(this->get_logger(), "Failed to start metrics exporter on :%d", metrics_port);
+      exporter_.reset();
+    }
   }
 
   // Optional transport-layer fault injection (Extension K). A single
@@ -234,6 +276,25 @@ void NetworkBridge::load_parameters()
       auto manager = std::make_shared<SubscriptionManager>(
         shared_from_this(), topic, subscribe_namespace,
         zstd_level, publish_stale_data);
+
+      // Per-topic sensor classification. This is what makes the per-sensor
+      // backpressure policy table live in production: the audit found
+      // set_sensor_type() was never called with anything but its own default,
+      // so every stream silently used drop-newest.
+      const std::string type_param = topic + ".sensor_type";
+      const std::string sensor_type_str =
+        this->declare_parameter<std::string>(type_param, "ctrl");
+      manager->set_sensor_type(
+        sensorforge::protocol::sensor_type_from_string(sensor_type_str));
+
+      // Per-topic runtime limits: frames AND bytes.
+      sensorforge::core::StreamLimits limits;
+      limits.max_frames = static_cast<size_t>(
+        this->declare_parameter<int64_t>(topic + ".max_queued_frames", 512));
+      limits.max_bytes = static_cast<size_t>(
+        this->declare_parameter<int64_t>(topic + ".max_queued_bytes", 64 * 1024 * 1024));
+      manager->set_stream_limits(limits);
+
       manager->setup_subscription();
       sub_mgrs_.push_back(manager);
 
@@ -309,8 +370,16 @@ void NetworkBridge::receive_data(std::span<const uint8_t> data)
   //    sequence & timestamp (stream key 0 = the single inbound link).
   namespace sfp = sensorforge::protocol;
   sfp::FrameHeader fh;
+  // The frame's sensor_type is the only per-stream discriminator available
+  // before decompression, so it keys the decoder. This is strictly better than
+  // the previous constant 0, which merged every topic on the link into one
+  // sequence space and made per-stream gaps unobservable. (Full per-topic
+  // keying would require the topic name, which lives inside the compressed
+  // payload -- see the limitation note in the README.)
+  const uint64_t stream_key = static_cast<uint64_t>(
+    sfp::get_sensor_type_hint(data.data(), data.size()));
   const sfp::FrameError err =
-    frame_decoder_.decode(data.data(), data.size(), /*stream_key=*/0, fh);
+    frame_decoder_.decode(data.data(), data.size(), stream_key, fh);
   if (err != sfp::FrameError::kOk) {
     ++frame_reject_count_;
     if (err == sfp::FrameError::kHeaderCrcMismatch ||
@@ -324,6 +393,11 @@ void NetworkBridge::receive_data(std::span<const uint8_t> data)
       std::string(sfp::to_string(err)).c_str(),
       static_cast<unsigned long long>(frame_reject_count_),
       static_cast<unsigned long long>(crc_failure_count_));
+    log_event(
+      "frame_rejected",
+      "\"error\":\"" + std::string(sfp::to_string(err)) +
+      "\",\"rejects\":" + std::to_string(frame_reject_count_) +
+      ",\"crc_failures\":" + std::to_string(crc_failure_count_));
     return;
   }
 
@@ -455,9 +529,9 @@ void NetworkBridge::send_data(std::shared_ptr<SubscriptionManager> manager)
   // topics, so the sensor_type is kControl; dedicated sensor publishers use
   // their specific type.
   namespace sfp = sensorforge::protocol;
-  const uint64_t timestamp_ns = static_cast<uint64_t>(
-    std::chrono::duration_cast<std::chrono::nanoseconds>(
-      std::chrono::system_clock::now().time_since_epoch()).count());
+  // Monotonised wall clock: never regresses, so the peer's monotonicity check
+  // cannot be wedged by an NTP step (core/clock.hpp).
+  const uint64_t timestamp_ns = tx_clock_.next();
 
   std::vector<uint8_t> frame;
   try {
@@ -479,6 +553,8 @@ void NetworkBridge::send_data(std::shared_ptr<SubscriptionManager> manager)
   // Send framed data. When transport fault injection is enabled, route through
   // the fault engine (single call site); it decides drop/delay/corrupt/etc and
   // performs the actual network write via its callback.
+  ++frames_sent_;
+  frame_bytes_sent_ += frame.size();
   if (fault_engine_) {
     const double t_s = std::chrono::duration<double>(
       std::chrono::steady_clock::now() - node_start_).count();
@@ -597,6 +673,109 @@ void NetworkBridge::decompress(
   if (ZSTD_isError(decompressed_result)) {
     throw std::runtime_error(ZSTD_getErrorName(decompressed_result));
   }
+}
+
+void NetworkBridge::log_event(const char * event, const std::string & fields)
+{
+  if (!structured_logging_) {
+    return;
+  }
+  // One JSON object per line. Emitted only on notable events (rejects, budget
+  // state changes), never per message.
+  RCLCPP_INFO(
+    this->get_logger(),
+    "{\"event\":\"%s\",\"node\":\"%s\",\"t_ns\":%llu,%s}",
+    event, this->get_name(),
+    static_cast<unsigned long long>(sensorforge::core::wall_now_ns()),
+    fields.c_str());
+}
+
+void NetworkBridge::update_metrics()
+{
+  uint64_t total_queued_bytes = 0;
+  uint64_t total_dropped = 0;
+  uint64_t total_overwritten = 0;
+
+  for (const auto & mgr : sub_mgrs_) {
+    if (!mgr) {
+      continue;
+    }
+    const std::string & topic = mgr->topic_;
+    const auto c = mgr->counters();
+    registry_.set_sensor_gauge("sensorforge_bridge_queued_frames", topic,
+      static_cast<double>(c.queued_frames));
+    registry_.set_sensor_gauge("sensorforge_bridge_queued_bytes", topic,
+      static_cast<double>(c.queued_bytes));
+    registry_.set_sensor_gauge("sensorforge_bridge_peak_queued_bytes", topic,
+      static_cast<double>(c.peak_queued_bytes));
+    registry_.set_sensor_gauge("sensorforge_bridge_enqueued_total", topic,
+      static_cast<double>(c.enqueued));
+    registry_.set_sensor_gauge("sensorforge_bridge_dropped_total", topic,
+      static_cast<double>(c.dropped));
+    registry_.set_sensor_gauge("sensorforge_bridge_overwritten_total", topic,
+      static_cast<double>(c.overwritten));
+    registry_.set_sensor_gauge("sensorforge_bridge_clock_regressions", topic,
+      static_cast<double>(mgr->clock_regressions()));
+    total_queued_bytes += c.queued_bytes;
+    total_dropped += c.dropped;
+    total_overwritten += c.overwritten;
+  }
+
+  // Link-level integrity, previously incremented and read by nothing.
+  const auto ds = frame_decoder_.stats();
+  registry_.set_gauge("sensorforge_bridge_frame_rejects_total",
+    static_cast<double>(frame_reject_count_));
+  registry_.set_gauge("sensorforge_bridge_crc_failures_total",
+    static_cast<double>(crc_failure_count_));
+  registry_.set_gauge("sensorforge_bridge_sequence_gaps_total",
+    static_cast<double>(ds.sequence_gaps));
+  registry_.set_gauge("sensorforge_bridge_missing_sequences_total",
+    static_cast<double>(ds.missing_sequences));
+  registry_.set_gauge("sensorforge_bridge_timestamp_regressions_total",
+    static_cast<double>(ds.timestamp_regressions));
+  registry_.set_gauge("sensorforge_bridge_decoder_streams",
+    static_cast<double>(ds.streams_tracked));
+  registry_.set_gauge("sensorforge_bridge_frames_sent_total",
+    static_cast<double>(frames_sent_));
+  registry_.set_gauge("sensorforge_bridge_frame_bytes_sent_total",
+    static_cast<double>(frame_bytes_sent_));
+
+  if (wal_writer_) {
+    registry_.set_gauge("sensorforge_bridge_wal_records_total",
+      static_cast<double>(wal_writer_->records_written()));
+    registry_.set_gauge("sensorforge_bridge_wal_bytes_total",
+      static_cast<double>(wal_writer_->bytes_written()));
+    registry_.set_gauge("sensorforge_bridge_wal_fsyncs_total",
+      static_cast<double>(wal_writer_->fsync_count()));
+    registry_.set_gauge("sensorforge_bridge_wal_segment_id",
+      static_cast<double>(wal_writer_->current_segment_id()));
+  }
+
+  // Resource budget. Sampling is 1 Hz here, never on the message path.
+  const auto sample = sampler_.sample();
+  if (sample.rss_bytes > peak_rss_bytes_) {
+    peak_rss_bytes_ = sample.rss_bytes;
+  }
+  registry_.set_gauge("sensorforge_bridge_rss_bytes",
+    static_cast<double>(sample.rss_bytes));
+  registry_.set_gauge("sensorforge_bridge_peak_rss_bytes",
+    static_cast<double>(peak_rss_bytes_));
+  registry_.set_gauge("sensorforge_bridge_cpu_percent", sample.cpu_percent);
+
+  const auto state =
+    sensorforge::core::evaluate_budget(budget_, sample.rss_bytes, total_queued_bytes);
+  registry_.set_gauge("sensorforge_bridge_budget_state",
+    static_cast<double>(static_cast<int>(state)));
+  if (state == sensorforge::core::BudgetState::kHardBreach) {
+    ++shed_events_;
+    log_event(
+      "budget_hard_breach",
+      "\"rss_bytes\":" + std::to_string(sample.rss_bytes) +
+      ",\"queued_bytes\":" + std::to_string(total_queued_bytes) +
+      ",\"dropped\":" + std::to_string(total_dropped));
+  }
+  registry_.set_gauge("sensorforge_bridge_shed_events_total",
+    static_cast<double>(shed_events_));
 }
 
 int main(int argc, char ** argv)

@@ -33,8 +33,29 @@ add_library(sensorforge_protocol STATIC
   ${SF_ROOT}/src/protocol/frame_codec.cpp
   ${SF_ROOT}/src/replay/wal_writer.cpp
   ${SF_ROOT}/src/replay/wal_reader.cpp
+  ${SF_ROOT}/src/core/resource_monitor.cpp
 )
 target_compile_features(sensorforge_protocol PUBLIC cxx_std_20)
+target_link_libraries(sensorforge_protocol PUBLIC Threads::Threads)
+
+# Recording pipeline (recorder + selective recording + policy) and offload.
+# ROS-free, so the whole integrated path is testable in this standalone build.
+add_library(sensorforge_pipeline STATIC
+  ${SF_ROOT}/src/pipeline/recorder.cpp
+  ${SF_ROOT}/src/offload/uploader.cpp
+)
+target_compile_features(sensorforge_pipeline PUBLIC cxx_std_20)
+target_link_libraries(sensorforge_pipeline PUBLIC sensorforge_protocol Threads::Threads)
+
+# wal_replay: the deterministic replay tool. The audit found WalReader was
+# reachable from no shipped binary; this is that binary.
+add_executable(wal_replay ${SF_ROOT}/src/replay/replay_main.cpp)
+target_link_libraries(wal_replay PRIVATE sensorforge_protocol)
+
+# End-to-end reference workload: drives the REAL path (buffer -> frame -> CRC
+# -> WAL -> replay) with a realistic multi-sensor mix.
+add_executable(e2e_reference ${SF_ROOT}/tools/e2e_reference.cpp)
+target_link_libraries(e2e_reference PRIVATE sensorforge_pipeline)
 
 if(SENSORFORGE_BUILD_TESTS)
   find_package(GTest REQUIRED)
@@ -72,10 +93,21 @@ if(SENSORFORGE_BUILD_TESTS)
     ${SF_ROOT}/test/unit/test_report.cpp
     ${SF_ROOT}/test/unit/test_metrics.cpp
     ${SF_ROOT}/test/unit/test_parallel.cpp
+    ${SF_ROOT}/test/unit/test_stream_buffer.cpp
+    ${SF_ROOT}/test/unit/test_ring_overwrite.cpp
+    ${SF_ROOT}/test/unit/test_wal_restart.cpp
+    ${SF_ROOT}/test/unit/test_replay_digest.cpp
+    ${SF_ROOT}/test/unit/test_sequence_integrity.cpp
+    ${SF_ROOT}/test/unit/test_recorder.cpp
+    ${SF_ROOT}/test/unit/test_recording_policy.cpp
+    ${SF_ROOT}/test/unit/test_trigger.cpp
+    ${SF_ROOT}/test/unit/test_offload.cpp
+    ${SF_ROOT}/test/unit/test_resource_monitor.cpp
   )
   target_include_directories(sensorforge_unit_tests PRIVATE ${SF_ROOT}/test/unit ${SF_ROOT})
   target_link_libraries(sensorforge_unit_tests
-    sensorforge_protocol sensorforge_scenario sensorforge_faults sensorforge_report
+    sensorforge_protocol sensorforge_pipeline
+    sensorforge_scenario sensorforge_faults sensorforge_report
     GTest::gtest GTest::gtest_main Threads::Threads)
   add_test(NAME unit COMMAND sensorforge_unit_tests)
 endif()

@@ -1,0 +1,15 @@
+=== OFFLOAD: destination HEALTHY ===
+dropped              0 (0.0000%)
+msgs_per_sec         355.5
+wal_MB_per_sec       8.469
+capture_to_record_us p50=234.0 p99=918.0 p999=4857.0 (n=5405)
+offload              dest=healthy enqueued=9 uploaded=8 failed_attempts=0 backlog=0 drain_ms=0.0
+  stream   type       policy              captured  recorded   dropped    overwr  peak_bytes
+
+=== OFFLOAD: destination UNAVAILABLE during recording, then returns ===
+dropped              0 (0.0000%)
+msgs_per_sec         355.7
+wal_MB_per_sec       8.476
+capture_to_record_us p50=254.0 p99=1092.0 p999=4724.0 (n=5405)
+offload              dest=started_down enqueued=9 uploaded=8 failed_attempts=69 backlog=0 drain_ms=706.9
+  stream   type       policy              captured  recorded   dropped    overwr  peak_bytes

@@ -20,7 +20,7 @@ TEST(SpscRing, EmptyAndFull)
 {
   SPSCRing<int, 8> ring;
   SF_EXPECT_TRUE(ring.empty_approx());
-  SF_EXPECT_EQ(ring.capacity(), 7u);  // one slot reserved
+  SF_EXPECT_EQ(ring.capacity(), 7u);  // one slot reserved (see spsc_ring.hpp)
 
   int out = 0;
   SF_EXPECT_FALSE(ring.try_pop(out));  // empty pop fails
@@ -57,10 +57,16 @@ TEST(SpscRing, FifoOrderAndWraparound)
 
 TEST(SpscRing, OverwriteOldestPolicyHelper)
 {
-  SPSCRing<int, 4> ring;  // capacity 3
-  for (int i = 0; i < 3; ++i) {SF_EXPECT_TRUE(ring.try_push(i));}
+  // force_push_overwrite() was replaced by push_overwrite(item, evicted), which
+  // reports how many elements it dropped and advances the tail with a CAS
+  // rather than a racy plain store. See test_ring_overwrite.cpp for the
+  // concurrent coverage the old helper never had.
+  SPSCRing<int, 8> ring;   // capacity 7
+  for (int i = 0; i < 7; ++i) {SF_EXPECT_TRUE(ring.try_push(i));}
   SF_EXPECT_FALSE(ring.try_push(100));   // full
-  SF_EXPECT_TRUE(ring.force_push_overwrite(100));  // drops oldest, inserts new
+  uint64_t evicted = 0;
+  SF_EXPECT_TRUE(ring.push_overwrite(100, evicted));
+  SF_EXPECT_EQ(evicted, 1u);
   // Oldest (0) should be gone; first pop is 1.
   int out = 0;
   SF_ASSERT_TRUE(ring.try_pop(out));

@@ -4,10 +4,21 @@ SensorForge - SPSC ring / seqlock concurrency stress test (Extension A)
 Part of the SensorForge AV HIL validation platform.
 
 Standalone (no ROS2, no GoogleTest) so it can be compiled with
--fsanitize=thread and run in the TSan CI job. One producer thread and one
-consumer thread hammer an SPSCRing; a third writer + reader pair exercise the
-Seqlock. On success it prints a summary and exits 0; a data race, if present,
-is reported by ThreadSanitizer and fails the run.
+-fsanitize=thread and run in the TSan CI job.
+
+Three concurrent workloads run simultaneously:
+
+  1. SPSCRing try_push / try_pop  -- the plain queue path.
+  2. SPSCRing push_overwrite      -- the PRODUCER-SIDE EVICTION path. The audit
+     found that the previous force_push_overwrite let the producer do a plain
+     load+store on the consumer-owned tail (a lost-update race) and that this
+     one racy method was the one method TSan never ran. It is now driven here,
+     concurrently with a live consumer, with a per-item checksum so a torn or
+     recycled slot is detected as corruption in addition to whatever TSan sees.
+  3. Seqlock writer / reader      -- RCU-style config updates.
+
+On success it prints a summary and exits 0; a data race, if present, is
+reported by ThreadSanitizer and fails the run.
 
 Build (on EC2):
   clang++ -std=c++20 -O1 -g -fsanitize=thread -Iinclude \
@@ -107,12 +118,62 @@ int main()
     }
   });
 
+  // ---- overwrite / saturation path -----------------------------------------
+  // A SEPARATE ring whose producer deliberately outruns its consumer, so the
+  // ring is permanently full and push_overwrite() evicts on essentially every
+  // push. This is the path the audit flagged as racy and untested.
+  SPSCRing<Item, 64> ow_ring;
+  std::atomic<uint64_t> ow_produced{0};
+  std::atomic<uint64_t> ow_consumed{0};
+  std::atomic<uint64_t> ow_evicted{0};
+  std::atomic<uint64_t> ow_mismatches{0};
+  std::atomic<uint64_t> ow_regressions{0};
+
+  std::thread ow_producer([&]() {
+    uint64_t seq = 0;
+    uint64_t evicted = 0;
+    while (!stop.load(std::memory_order_relaxed)) {
+      Item it{seq, seq * 2654435761u};
+      ow_ring.push_overwrite(it, evicted);
+      ++seq;
+      ow_produced.store(seq, std::memory_order_relaxed);
+      ow_evicted.store(evicted, std::memory_order_relaxed);
+    }
+  });
+
+  std::thread ow_consumer([&]() {
+    Item it;
+    uint64_t last = 0;
+    bool have_last = false;
+    while (!stop.load(std::memory_order_relaxed)) {
+      if (ow_ring.try_pop(it)) {
+        // Content integrity: a torn or recycled slot breaks the checksum.
+        if (it.checksum != it.seq * 2654435761u) {
+          ow_mismatches.fetch_add(1, std::memory_order_relaxed);
+        }
+        // Ordering integrity: overwrite may SKIP sequences (that is the point)
+        // but must never deliver one backwards, which is what a lost update on
+        // the tail index would produce.
+        if (have_last && it.seq < last) {
+          ow_regressions.fetch_add(1, std::memory_order_relaxed);
+        }
+        last = it.seq;
+        have_last = true;
+        ow_consumed.fetch_add(1, std::memory_order_relaxed);
+      }
+      // Deliberately slow: keeps the ring saturated so eviction dominates.
+      std::this_thread::sleep_for(std::chrono::microseconds(20));
+    }
+  });
+
   std::this_thread::sleep_until(deadline);
   stop.store(true, std::memory_order_relaxed);
   producer.join();
   consumer.join();
   cfg_writer.join();
   cfg_reader.join();
+  ow_producer.join();
+  ow_consumer.join();
 
   std::printf(
     "[STRESS] produced=%llu consumed=%llu ring_mismatches=%llu torn_seqlock_reads=%llu\n",
@@ -120,9 +181,27 @@ int main()
     static_cast<unsigned long long>(consumed.load()),
     static_cast<unsigned long long>(mismatches.load()),
     static_cast<unsigned long long>(torn_reads.load()));
+  std::printf(
+    "[STRESS] overwrite produced=%llu consumed=%llu evicted=%llu "
+    "mismatches=%llu seq_regressions=%llu\n",
+    static_cast<unsigned long long>(ow_produced.load()),
+    static_cast<unsigned long long>(ow_consumed.load()),
+    static_cast<unsigned long long>(ow_evicted.load()),
+    static_cast<unsigned long long>(ow_mismatches.load()),
+    static_cast<unsigned long long>(ow_regressions.load()));
+  std::printf(
+    "[STRESS] total_ring_ops=%llu\n",
+    static_cast<unsigned long long>(
+      produced.load() + consumed.load() + ow_produced.load() + ow_consumed.load()));
 
-  if (mismatches.load() != 0 || torn_reads.load() != 0) {
+  if (mismatches.load() != 0 || torn_reads.load() != 0 ||
+    ow_mismatches.load() != 0 || ow_regressions.load() != 0)
+  {
     std::printf("[STRESS] FAIL: data corruption detected\n");
+    return 1;
+  }
+  if (ow_evicted.load() == 0) {
+    std::printf("[STRESS] FAIL: overwrite path never evicted; test is not exercising it\n");
     return 1;
   }
   std::printf("[STRESS] PASS: no corruption (run under TSan to check for races)\n");
