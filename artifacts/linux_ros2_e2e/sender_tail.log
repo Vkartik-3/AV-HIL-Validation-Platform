@@ -1,0 +1,23 @@
+[INFO] [1787869355.292827637] [sf_sender]: Recording WAL to /out/wal (fsync=on_segment_seal). Recovery: segments=0 resumed_segment=1 tail_records=0 truncated_bytes=0
+[INFO] [1787869355.293027221] [sf_sender]: Bridge Prometheus /metrics on :9101
+[WARN] [1787869355.293227054] [sf_sender]: Topic /sensors/lidar not found
+[INFO] [1787869355.293279637] [sf_sender]: Topic: /sensors/lidar, Rate: 10.000000 Hz
+[WARN] [1787869355.293385221] [sf_sender]: Topic /sensors/camera not found
+[INFO] [1787869355.293448679] [sf_sender]: Topic: /sensors/camera, Rate: 30.000000 Hz
+[WARN] [1787869355.293559179] [sf_sender]: Topic /sensors/imu not found
+[INFO] [1787869355.293599221] [sf_sender]: Topic: /sensors/imu, Rate: 200.000000 Hz
+[WARN] [1787869355.293712346] [sf_sender]: Topic /sensors/gps not found
+[INFO] [1787869355.293768387] [sf_sender]: Topic: /sensors/gps, Rate: 20.000000 Hz
+[INFO] [1787869355.294349929] [sf_sender]: role_: client
+[INFO] [1787869355.294412137] [sf_sender]: Remote Address: 127.0.0.1
+[INFO] [1787869355.294451096] [sf_sender]: Remote Port: 5100
+[INFO] [1787869355.294495221] [sf_sender]: Loaded network interface: network_bridge::TcpInterface
+[INFO] [1787869355.294655846] [sf_sender]: Connected to server at 127.0.0.1:5100
+[INFO] [1787869358.687196250] [sf_sender]: Created generic subscriber for topic /sensors/imu
+[INFO] [1787869358.693990458] [sf_sender]: Created generic subscriber for topic /sensors/camera
+[INFO] [1787869358.695182291] [sf_sender]: Created generic subscriber for topic /sensors/gps
+[INFO] [1787869358.895676958] [sf_sender]: Created generic subscriber for topic /sensors/lidar
+[INFO] [1787869413.764209345] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[INFO] [1787869413.764787762] [sf_sender]: NetworkBridge: Shuting down
+[ERROR] [1787869413.765319845] [sf_sender]: Receive thread could not receive first start packet
+[INFO] [1787869413.769054512] [sf_sender]: NetworkBridge: Shuting down

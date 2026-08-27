@@ -525,10 +525,16 @@ void NetworkBridge::send_data(std::shared_ptr<SubscriptionManager> manager)
   }
 
   // Wrap the compressed payload in a SensorForge frame: magic/version/seq/
-  // timestamp + CRC32C over header and payload. The bridge forwards arbitrary
-  // topics, so the sensor_type is kControl; dedicated sensor publishers use
-  // their specific type.
+  // timestamp + CRC32C over header and payload. The frame carries the stream's
+  // CONFIGURED sensor type (from the per-topic `sensor_type` parameter) rather
+  // than a blanket kControl, so the receiver keys its per-stream integrity
+  // tracking by sensor and a recording can be analysed per sensor.
   namespace sfp = sensorforge::protocol;
+  const sfp::SensorType stream_type = manager->sensor_type();
+  // Per-stream sequence (see SubscriptionManager::current_sequence). tx_sequence_
+  // is kept purely as a link-wide frame counter for metrics.
+  const uint64_t stream_sequence = manager->current_sequence();
+  ++tx_sequence_;
   // Monotonised wall clock: never regresses, so the peer's monotonicity check
   // cannot be wedged by an NTP step (core/clock.hpp).
   const uint64_t timestamp_ns = tx_clock_.next();
@@ -536,18 +542,26 @@ void NetworkBridge::send_data(std::shared_ptr<SubscriptionManager> manager)
   std::vector<uint8_t> frame;
   try {
     frame = sfp::encode_frame(
-      sfp::SensorType::kControl, tx_sequence_++, timestamp_ns,
+      stream_type, stream_sequence, timestamp_ns,
       sfp::kFlagCompressed, compressed_data.data(), compressed_data.size());
   } catch (const std::exception & e) {
     RCLCPP_ERROR(this->get_logger(), "Frame encode failed: %s", e.what());
     return;
   }
 
-  // Optionally record the frame payload to the WAL replay log (append-only).
+  // Record the COMPLETE ENCODED FRAME, not the bare compressed payload.
+  //
+  // The previous behaviour appended `compressed_data`, which left every record
+  // un-self-describing: replaying one gave back bytes with no magic, no CRC, no
+  // sequence and no timestamp of its own, so a reader could neither validate a
+  // record nor tell what it was without re-deriving that context from the WAL
+  // header. It also disagreed with the Recorder, which has always stored frames
+  // -- one WAL format meaning two different things depending on which writer
+  // produced it. Storing the frame makes a replayed record independently
+  // verifiable with decode_header(), which is what `wal_replay --verify` checks.
   if (wal_writer_) {
     wal_writer_->append(
-      timestamp_ns, sfp::SensorType::kControl, tx_sequence_ - 1,
-      compressed_data.data(), compressed_data.size());
+      timestamp_ns, stream_type, stream_sequence, frame.data(), frame.size());
   }
 
   // Send framed data. When transport fault injection is enabled, route through

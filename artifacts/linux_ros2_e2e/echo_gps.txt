@@ -1,0 +1,23 @@
+header:
+  stamp:
+    sec: 1787869409
+    nanosec: 382725051
+  frame_id: sensor
+status:
+  status: 0
+  service: 1
+latitude: 40.42327160934824
+longitude: -86.92096912354086
+altitude: 197.8060850551008
+position_covariance:
+- 2.25
+- 0.0
+- 0.0
+- 0.0
+- 2.25
+- 0.0
+- 0.0
+- 0.0
+- 9.0
+position_covariance_type: 2
+---

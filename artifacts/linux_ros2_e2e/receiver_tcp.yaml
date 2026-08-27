@@ -1,0 +1,11 @@
+/sf_receiver:
+  ros__parameters:
+    network_interface: "network_bridge::TcpInterface"
+    TcpInterface:
+      role: "server"
+      port: 5100
+    default_rate: 50.0
+    publish_stale_data: false
+    metrics_port: 9102
+    structured_logging: true
+    publish_namespace: "/recv"

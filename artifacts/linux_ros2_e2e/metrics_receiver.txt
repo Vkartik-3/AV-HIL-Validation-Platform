@@ -1,0 +1,30 @@
+# TYPE sensorforge_bridge_budget_state gauge
+sensorforge_bridge_budget_state 0
+# TYPE sensorforge_bridge_cpu_percent gauge
+sensorforge_bridge_cpu_percent 25.9993
+# TYPE sensorforge_bridge_crc_failures_total gauge
+sensorforge_bridge_crc_failures_total 0
+# TYPE sensorforge_bridge_decoder_streams gauge
+sensorforge_bridge_decoder_streams 4
+# HELP sensorforge_bridge_dropped_total Frames dropped per stream
+# TYPE sensorforge_bridge_dropped_total gauge
+# TYPE sensorforge_bridge_frame_bytes_sent_total gauge
+sensorforge_bridge_frame_bytes_sent_total 0
+# TYPE sensorforge_bridge_frame_rejects_total gauge
+sensorforge_bridge_frame_rejects_total 0
+# TYPE sensorforge_bridge_frames_sent_total gauge
+sensorforge_bridge_frames_sent_total 0
+# TYPE sensorforge_bridge_missing_sequences_total gauge
+sensorforge_bridge_missing_sequences_total 0
+# TYPE sensorforge_bridge_peak_rss_bytes gauge
+sensorforge_bridge_peak_rss_bytes 4.15703e+07
+# HELP sensorforge_bridge_queued_bytes Bytes queued per stream
+# TYPE sensorforge_bridge_queued_bytes gauge
+# TYPE sensorforge_bridge_rss_bytes gauge
+sensorforge_bridge_rss_bytes 4.15703e+07
+# TYPE sensorforge_bridge_sequence_gaps_total gauge
+sensorforge_bridge_sequence_gaps_total 0
+# TYPE sensorforge_bridge_shed_events_total gauge
+sensorforge_bridge_shed_events_total 0
+# TYPE sensorforge_bridge_timestamp_regressions_total gauge
+sensorforge_bridge_timestamp_regressions_total 0

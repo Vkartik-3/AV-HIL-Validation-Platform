@@ -191,6 +191,18 @@ public:
   size_t queued_bytes() const {return buffer_.queued_bytes();}
   uint64_t clock_regressions() const {return clock_.regressions();}
 
+  /**
+   * @brief Capture sequence of the frame most recently returned by get_data().
+   *
+   * This is what goes on the wire. The bridge used to stamp a single link-wide
+   * counter shared by every topic, which was harmless while the receiver also
+   * tracked one link-wide stream -- but once the decoder keys per stream, each
+   * stream sees the numbers consumed by the OTHER streams as missing, and a
+   * healthy link reports tens of thousands of phantom gaps. The wire sequence
+   * has to be per-stream for a per-stream gap count to mean anything.
+   */
+  uint64_t current_sequence() const {return current_frame_.sequence;}
+
 protected:
   bool topic_found_;
   /**

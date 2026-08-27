@@ -5,12 +5,12 @@ Running main() from /private/tmp/googletest-20250910-5249-qce8ci/googletest-1.17
 [ RUN      ] Crc32c.KnownVectors
 [       OK ] Crc32c.KnownVectors (0 ms)
 [ RUN      ] Crc32c.DeterministicRepeat
-[       OK ] Crc32c.DeterministicRepeat (3 ms)
+[       OK ] Crc32c.DeterministicRepeat (1 ms)
 [ RUN      ] Crc32c.SingleBitFlipChangesCrc
 [       OK ] Crc32c.SingleBitFlipChangesCrc (0 ms)
 [ RUN      ] Crc32c.LengthSensitivity
-[       OK ] Crc32c.LengthSensitivity (1 ms)
-[----------] 4 tests from Crc32c (5 ms total)
+[       OK ] Crc32c.LengthSensitivity (0 ms)
+[----------] 4 tests from Crc32c (2 ms total)
 
 [----------] 3 tests from FrameValidation
 [ RUN      ] FrameValidation.RejectsBadVersionAndLength
@@ -25,12 +25,12 @@ Running main() from /private/tmp/googletest-20250910-5249-qce8ci/googletest-1.17
 [ RUN      ] SpscRing.EmptyAndFull
 [       OK ] SpscRing.EmptyAndFull (0 ms)
 [ RUN      ] SpscRing.FifoOrderAndWraparound
-[       OK ] SpscRing.FifoOrderAndWraparound (3 ms)
+[       OK ] SpscRing.FifoOrderAndWraparound (1 ms)
 [ RUN      ] SpscRing.OverwriteOldestPolicyHelper
 [       OK ] SpscRing.OverwriteOldestPolicyHelper (0 ms)
 [ RUN      ] SpscRing.ConcurrentProducerConsumerNoLoss
-[       OK ] SpscRing.ConcurrentProducerConsumerNoLoss (23 ms)
-[----------] 4 tests from SpscRing (27 ms total)
+[       OK ] SpscRing.ConcurrentProducerConsumerNoLoss (15 ms)
+[----------] 4 tests from SpscRing (17 ms total)
 
 [----------] 3 tests from Seqlock
 [ RUN      ] Seqlock.StoreLoadRoundTrip
@@ -38,8 +38,8 @@ Running main() from /private/tmp/googletest-20250910-5249-qce8ci/googletest-1.17
 [ RUN      ] Seqlock.SequenceIsEvenWhenStable
 [       OK ] Seqlock.SequenceIsEvenWhenStable (0 ms)
 [ RUN      ] Seqlock.ConcurrentReadsAreConsistent
-[       OK ] Seqlock.ConcurrentReadsAreConsistent (23685 ms)
-[----------] 3 tests from Seqlock (23686 ms total)
+[       OK ] Seqlock.ConcurrentReadsAreConsistent (18418 ms)
+[----------] 3 tests from Seqlock (18418 ms total)
 
 [----------] 1 test from RecordCodec
 [ RUN      ] RecordCodec.CorruptionDetected
@@ -48,12 +48,12 @@ Running main() from /private/tmp/googletest-20250910-5249-qce8ci/googletest-1.17
 
 [----------] 3 tests from Wal
 [ RUN      ] Wal.RoundTripWithRollover
-[       OK ] Wal.RoundTripWithRollover (21 ms)
+[       OK ] Wal.RoundTripWithRollover (23 ms)
 [ RUN      ] Wal.DeterministicReplayDeliversAll
 [       OK ] Wal.DeterministicReplayDeliversAll (3 ms)
 [ RUN      ] Wal.CorruptionRecovery
 [       OK ] Wal.CorruptionRecovery (3 ms)
-[----------] 3 tests from Wal (29 ms total)
+[----------] 3 tests from Wal (31 ms total)
 
 [----------] 6 tests from Backpressure
 [ RUN      ] Backpressure.DefaultPolicyMapping
@@ -83,7 +83,7 @@ Running main() from /private/tmp/googletest-20250910-5249-qce8ci/googletest-1.17
 
 [----------] 3 tests from ScenarioParser
 [ RUN      ] ScenarioParser.ParsesFullScenario
-[       OK ] ScenarioParser.ParsesFullScenario (1 ms)
+[       OK ] ScenarioParser.ParsesFullScenario (0 ms)
 [ RUN      ] ScenarioParser.RejectsMalformed
 [       OK ] ScenarioParser.RejectsMalformed (0 ms)
 [ RUN      ] ScenarioParser.FaultTypeRoundTrip
@@ -131,12 +131,12 @@ Running main() from /private/tmp/googletest-20250910-5249-qce8ci/googletest-1.17
 
 [----------] 3 tests from Report
 [ RUN      ] Report.JsonSchemaMatchesSpec
-[       OK ] Report.JsonSchemaMatchesSpec (1 ms)
+[       OK ] Report.JsonSchemaMatchesSpec (2 ms)
 [ RUN      ] Report.FailResultReflected
 [       OK ] Report.FailResultReflected (0 ms)
 [ RUN      ] Report.HtmlIsSelfContained
 [       OK ] Report.HtmlIsSelfContained (0 ms)
-[----------] 3 tests from Report (1 ms total)
+[----------] 3 tests from Report (2 ms total)
 
 [----------] 5 tests from Registry
 [ RUN      ] Registry.GaugeWithLabelRenders
@@ -226,7 +226,7 @@ Running main() from /private/tmp/googletest-20250910-5249-qce8ci/googletest-1.17
 [ RUN      ] ReplayDigest.SingleByteChangeChangesDigest
 [       OK ] ReplayDigest.SingleByteChangeChangesDigest (3 ms)
 [ RUN      ] ReplayDigest.StreamingMatchesLoadingReader
-[       OK ] ReplayDigest.StreamingMatchesLoadingReader (14 ms)
+[       OK ] ReplayDigest.StreamingMatchesLoadingReader (15 ms)
 [ RUN      ] ReplayDigest.ReplayedRecordsRevalidateAsFrames
 [       OK ] ReplayDigest.ReplayedRecordsRevalidateAsFrames (5 ms)
 [ RUN      ] ReplayDigest.StartTimestampSeeksForward
@@ -254,7 +254,7 @@ Running main() from /private/tmp/googletest-20250910-5249-qce8ci/googletest-1.17
 [       OK ] SequenceIntegrity.DecoderStateIsBounded (3 ms)
 [ RUN      ] SequenceIntegrity.ResetClearsHistory
 [       OK ] SequenceIntegrity.ResetClearsHistory (0 ms)
-[----------] 8 tests from SequenceIntegrity (4 ms total)
+[----------] 8 tests from SequenceIntegrity (5 ms total)
 
 [----------] 2 tests from MonotonicWallClockTest
 [ RUN      ] MonotonicWallClockTest.NeverRegressesAndCountsClockSteps
@@ -319,8 +319,8 @@ Running main() from /private/tmp/googletest-20250910-5249-qce8ci/googletest-1.17
 [ RUN      ] TriggerTest.ExpireDropsEntriesOlderThanPreRollHorizon
 [       OK ] TriggerTest.ExpireDropsEntriesOlderThanPreRollHorizon (0 ms)
 [ RUN      ] TriggerTest.SelectiveRecordingSavesBytesAndRecoversPreRoll
-[       OK ] TriggerTest.SelectiveRecordingSavesBytesAndRecoversPreRoll (57 ms)
-[----------] 9 tests from TriggerTest (61 ms total)
+[       OK ] TriggerTest.SelectiveRecordingSavesBytesAndRecoversPreRoll (52 ms)
+[----------] 9 tests from TriggerTest (56 ms total)
 
 [----------] 8 tests from OffloadTest
 [ RUN      ] OffloadTest.FilesystemDestinationPublishesAtomically
@@ -330,22 +330,22 @@ Running main() from /private/tmp/googletest-20250910-5249-qce8ci/googletest-1.17
 [ RUN      ] OffloadTest.RecordingContinuesWhileDestinationIsDownThenDrains
 [       OK ] OffloadTest.RecordingContinuesWhileDestinationIsDownThenDrains (19 ms)
 [ RUN      ] OffloadTest.RestartRecoversPendingSegments
-[       OK ] OffloadTest.RestartRecoversPendingSegments (74 ms)
+[       OK ] OffloadTest.RestartRecoversPendingSegments (75 ms)
 [ RUN      ] OffloadTest.AlreadyUploadedSegmentIsNotDuplicated
-[       OK ] OffloadTest.AlreadyUploadedSegmentIsNotDuplicated (12 ms)
+[       OK ] OffloadTest.AlreadyUploadedSegmentIsNotDuplicated (10 ms)
 [ RUN      ] OffloadTest.QueueIsBoundedAndRejectsRatherThanGrows
 [       OK ] OffloadTest.QueueIsBoundedAndRejectsRatherThanGrows (0 ms)
 [ RUN      ] OffloadTest.LocalSegmentSurvivesUntilAcknowledged
-[       OK ] OffloadTest.LocalSegmentSurvivesUntilAcknowledged (90 ms)
+[       OK ] OffloadTest.LocalSegmentSurvivesUntilAcknowledged (87 ms)
 [ RUN      ] OffloadTest.MaxAttemptsMarksFailedAndStopsRetrying
-[       OK ] OffloadTest.MaxAttemptsMarksFailedAndStopsRetrying (7 ms)
-[----------] 8 tests from OffloadTest (216 ms total)
+[       OK ] OffloadTest.MaxAttemptsMarksFailedAndStopsRetrying (6 ms)
+[----------] 8 tests from OffloadTest (212 ms total)
 
 [----------] 8 tests from ResourceMonitorTest
 [ RUN      ] ResourceMonitorTest.SamplerReportsPlausibleRss
 [       OK ] ResourceMonitorTest.SamplerReportsPlausibleRss (0 ms)
 [ RUN      ] ResourceMonitorTest.RssTracksAnAllocation
-[       OK ] ResourceMonitorTest.RssTracksAnAllocation (429 ms)
+[       OK ] ResourceMonitorTest.RssTracksAnAllocation (423 ms)
 [ RUN      ] ResourceMonitorTest.CpuPercentIsNonNegative
 [       OK ] ResourceMonitorTest.CpuPercentIsNonNegative (2 ms)
 [ RUN      ] ResourceMonitorTest.UnsetBudgetNeverBreaches
@@ -358,7 +358,7 @@ Running main() from /private/tmp/googletest-20250910-5249-qce8ci/googletest-1.17
 [       OK ] ResourceMonitorTest.HardBeatsSoftWhenBothBreached (0 ms)
 [ RUN      ] ResourceMonitorTest.PlatformNameIsReported
 [       OK ] ResourceMonitorTest.PlatformNameIsReported (0 ms)
-[----------] 8 tests from ResourceMonitorTest (432 ms total)
+[----------] 8 tests from ResourceMonitorTest (425 ms total)
 
 [----------] 25 tests from Sizes/FrameRoundTrip
 [ RUN      ] Sizes/FrameRoundTrip.EncodesAndDecodes/0
@@ -449,7 +449,7 @@ Running main() from /private/tmp/googletest-20250910-5249-qce8ci/googletest-1.17
 [ RUN      ] Modes/FrameCorruption.Detected/16
 [       OK ] Modes/FrameCorruption.Detected/16 (18 ms)
 [ RUN      ] Modes/FrameCorruption.Detected/17
-[       OK ] Modes/FrameCorruption.Detected/17 (17 ms)
+[       OK ] Modes/FrameCorruption.Detected/17 (18 ms)
 [ RUN      ] Modes/FrameCorruption.Detected/18
 [       OK ] Modes/FrameCorruption.Detected/18 (18 ms)
 [ RUN      ] Modes/FrameCorruption.Detected/19
@@ -457,14 +457,14 @@ Running main() from /private/tmp/googletest-20250910-5249-qce8ci/googletest-1.17
 [ RUN      ] Modes/FrameCorruption.Detected/20
 [       OK ] Modes/FrameCorruption.Detected/20 (299 ms)
 [ RUN      ] Modes/FrameCorruption.Detected/21
-[       OK ] Modes/FrameCorruption.Detected/21 (288 ms)
+[       OK ] Modes/FrameCorruption.Detected/21 (287 ms)
 [ RUN      ] Modes/FrameCorruption.Detected/22
-[       OK ] Modes/FrameCorruption.Detected/22 (287 ms)
+[       OK ] Modes/FrameCorruption.Detected/22 (288 ms)
 [ RUN      ] Modes/FrameCorruption.Detected/23
-[       OK ] Modes/FrameCorruption.Detected/23 (301 ms)
+[       OK ] Modes/FrameCorruption.Detected/23 (303 ms)
 [ RUN      ] Modes/FrameCorruption.Detected/24
-[       OK ] Modes/FrameCorruption.Detected/24 (857 ms)
-[----------] 25 tests from Modes/FrameCorruption (2165 ms total)
+[       OK ] Modes/FrameCorruption.Detected/24 (858 ms)
+[----------] 25 tests from Modes/FrameCorruption (2168 ms total)
 
 [----------] 5 tests from Sizes/RecordRoundTrip
 [ RUN      ] Sizes/RecordRoundTrip.EncodeDecode/0
@@ -491,6 +491,6 @@ Running main() from /private/tmp/googletest-20250910-5249-qce8ci/googletest-1.17
 [----------] 4 tests from AllOps/AssertionOps (0 ms total)
 
 [----------] Global test environment tear-down
-[==========] 198 tests from 31 test suites ran. (28401 ms total)
+[==========] 198 tests from 31 test suites ran. (23110 ms total)
 [  PASSED  ] 198 tests.
-[ASSERTIONS] total=101197 passed=101197 failed=0
+[ASSERTIONS] total=101199 passed=101199 failed=0

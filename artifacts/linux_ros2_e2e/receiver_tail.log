@@ -1,0 +1,17 @@
+[INFO] [1787869352.291461178] [sf_receiver]: Bridge Prometheus /metrics on :9102
+[INFO] [1787869352.291617303] [sf_receiver]: Topics will be published under the namespace /recv
+[INFO] [1787869352.292204761] [sf_receiver]: role_: server
+[INFO] [1787869352.292244178] [sf_receiver]: Remote Address: 
+[INFO] [1787869352.292274303] [sf_receiver]: Remote Port: 5100
+[INFO] [1787869352.292304303] [sf_receiver]: Loaded network interface: network_bridge::TcpInterface
+[INFO] [1787869352.292365011] [sf_receiver]: Accepting connections
+[INFO] [1787869355.294692512] [sf_receiver]: Accepted connection from 127.0.0.1:42118
+[INFO] [1787869358.696475625] [sf_receiver]: Created publisher on /recv/sensors/imu type sensor_msgs/msg/Imu
+[INFO] [1787869358.739240125] [sf_receiver]: Created publisher on /recv/sensors/camera type sensor_msgs/msg/Image
+[INFO] [1787869358.745657916] [sf_receiver]: Created publisher on /recv/sensors/gps type sensor_msgs/msg/NavSatFix
+[INFO] [1787869359.004616750] [sf_receiver]: Created publisher on /recv/sensors/lidar type sensor_msgs/msg/PointCloud2
+[INFO] [1787869413.764487303] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[INFO] [1787869413.765271762] [sf_receiver]: NetworkBridge: Shuting down
+[ERROR] [1787869413.765473303] [sf_receiver]: Failed to receive buffer: End of file
+[ERROR] [1787869413.765703762] [sf_receiver]: Receive thread could not receive first start packet
+[INFO] [1787869413.767025220] [sf_receiver]: NetworkBridge: Shuting down
