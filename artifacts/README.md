@@ -18,6 +18,14 @@ Storage   APFS on internal NVMe
 Date      2026-08-27
 ```
 
+**These are latency MEASUREMENTS, not latency guarantees.** SensorForge is a
+performance-sensitive recording pipeline, not a hard real-time system: no
+`SCHED_FIFO`, no CPU pinning, no `mlockall`, five heap allocations per message
+on the bridge path, and a best-effort ROS2 wall timer as the consumer. The
+percentiles below describe typical behaviour on an ordinary kernel under no
+contention. What the system actually bounds is queue depth, queued bytes and
+memory -- and those bounds are asserted by the tests.
+
 **This is a developer laptop, not a controlled benchmark host.** Numbers are
 reproducible in kind, not to the digit. No CPU pinning, no governor control,
 other processes present.

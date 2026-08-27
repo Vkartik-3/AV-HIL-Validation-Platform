@@ -8,6 +8,19 @@ Racing. Licensed under original project license.
 
 ## SensorForge extensions by Kartik Vadhawana
 
+SensorForge is a **performance-sensitive multi-sensor recording pipeline**:
+bounded per-stream buffering with explicit backpressure policies, CRC-validated
+binary framing, a restart-safe segmented write-ahead log, and deterministic
+replay -- built so that queue depth, drops and memory stay inside stated limits
+under load, and so that every one of those limits is observable while running.
+
+It is **not a hard real-time system**, and nothing here should be read as one.
+There is no `SCHED_FIFO` or `SCHED_RR`, no CPU pinning or `isolcpus`, no
+`mlockall`, no priority inheritance, no deadline-miss detection, and no
+worst-case execution time analysis. The consumer is a best-effort ROS2 wall
+timer, and the hot path allocates. The guarantees offered are **boundedness and
+observability**, not latency bounds. See "Known limitations" for the specifics.
+
 Everything below is layered on top of upstream `network_bridge`. The boundary is
 kept explicit: see "Upstream vs SensorForge" at the end of this section.
 
@@ -147,8 +160,21 @@ Stated deliberately rather than papered over.
   sensor type would share a sequence space.
 - **No local fuzzing result** -- Apple's clang ships no libFuzzer runtime. The
   harnesses compile locally; CI runs them.
-- **This is not a real-time system.** No `SCHED_FIFO`, no CPU pinning, no
-  `mlockall`, and the hot path allocates per message.
+- **Not hard real-time, and the hot path allocates.** Counted in the source,
+  the bridge's capture-to-wire path performs **five** heap allocations per
+  message: `frame.data.resize()` in the subscription callback
+  (`subscription_manager.cpp:139`), then on the send thread the vector returned
+  by `create_header()`, the `message.reserve()` concatenation buffer, the
+  `ZSTD_compressBound()` resize inside `compress()`, and the vector returned by
+  `encode_frame()` (`frame_codec.cpp:91`). Moving a frame into a ring slot also
+  frees that slot's previous buffer. The ring itself is allocation-free, but
+  nothing around it is.
+  Combined with a best-effort wall timer as the consumer, latency is *typical
+  case measured*, not bounded. Making it hard real-time would mean preallocated
+  buffer pools, `SCHED_FIFO` with `mlockall`, a PREEMPT_RT kernel and WCET
+  analysis -- a redesign of the hot path, not a configuration change. The
+  measured capture-to-record percentiles above are what the system does on an
+  ordinary kernel under no contention; they are not a guarantee.
 - **Benchmark hosts are not controlled.** A developer laptop and shared CI
   runners, with no pinning or governor control. Numbers are reproducible in
   kind, not to the digit.

@@ -32,6 +32,16 @@ byte accounting and recording counters, which is what the brief asked for and
 what the previous SubscriptionManager could not express (it hard-coded one
 policy, one compile-time capacity, and never called set_sensor_type at all).
 
+PERFORMANCE CHARACTER
+--------------------
+This is a performance-sensitive pipeline, not a hard real-time one. The ring is
+allocation-free and the capture path never blocks unboundedly, but the pipeline
+around it does allocate (the captured payload copy and the encoded frame), the
+drain thread is an ordinary thread with no priority, and no deadline is
+enforced anywhere. What IS bounded is queue depth, queued bytes and memory --
+by frames, by bytes, and by the resource budget, all observable at run time.
+Latency figures in the artifacts are measured typical behaviour, not guarantees.
+
 THREADING
 ---------
 capture() is called from that stream's producer thread (one per stream). A
