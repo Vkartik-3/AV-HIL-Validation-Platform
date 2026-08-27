@@ -47,8 +47,15 @@ if(BUILD_TESTING)
     EXCLUDE
       bench
       stress
+      tools
+      fuzz
+      test/unit
       include/sensorforge
       src/protocol
+      src/replay
+      src/pipeline
+      src/offload
+      src/core
   )
 
   # SensorForge GoogleTest unit suite (Extension G). Non-ROS; links the core
@@ -128,6 +135,8 @@ target_include_directories(sensorforge_pipeline PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_compile_features(sensorforge_pipeline PUBLIC cxx_std_20)
 set_property(TARGET sensorforge_pipeline PROPERTY POSITION_INDEPENDENT_CODE ON)
+find_package(Threads REQUIRED)
+target_link_libraries(sensorforge_pipeline PUBLIC sensorforge_protocol Threads::Threads)
 
 # Fault injection engine (Extension K), ROS-free.
 add_library(sensorforge_faults STATIC

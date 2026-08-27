@@ -243,11 +243,48 @@ jobs:
         shell: bash
         run: |
           source /opt/ros/humble/setup.bash
+          set +e
           colcon build --packages-select network_bridge \
-            --cmake-args -DCMAKE_BUILD_TYPE=Release
+            --cmake-args -DCMAKE_BUILD_TYPE=Release 2>&1 | tee /tmp/colcon_build.log
+          rc=${PIPESTATUS[0]}
+          set -e
+          if [ $rc -ne 0 ]; then
+            # Surface the actual compiler/CMake diagnostics as workflow
+            # annotations. Raw job logs need an authenticated API call, so a
+            # bare "exit code 2" annotation tells a reader nothing about what
+            # broke; these lines do.
+            grep -E "error:|CMake Error|undefined reference|No such file" \
+              /tmp/colcon_build.log | head -25 | while IFS= read -r line; do
+                printf '::error::%s\n' "$(printf '%s' "$line" | tr -d '\r' | sed 's/%/%25/g')"
+              done
+            exit $rc
+          fi
+      - name: Upload colcon build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colcon-build-log
+          path: /tmp/colcon_build.log
       - name: colcon test (launch tests + gtest suite)
         shell: bash
         run: |
           source /opt/ros/humble/setup.bash
-          colcon test --packages-select network_bridge --return-code-on-test-failure
-          colcon test-result --all --verbose
+          set +e
+          colcon test --packages-select network_bridge --return-code-on-test-failure \
+            2>&1 | tee /tmp/colcon_test.log
+          rc=${PIPESTATUS[0]}
+          set -e
+          colcon test-result --all --verbose 2>&1 | tee -a /tmp/colcon_test.log || true
+          if [ $rc -ne 0 ]; then
+            grep -E "FAILED|failure|Failure|error:" /tmp/colcon_test.log \
+              | head -25 | while IFS= read -r line; do
+                printf '::error::%s\n' "$(printf '%s' "$line" | tr -d '\r' | sed 's/%/%25/g')"
+              done
+            exit $rc
+          fi
+      - name: Upload colcon test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colcon-test-log
+          path: /tmp/colcon_test.log
