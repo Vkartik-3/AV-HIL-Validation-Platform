@@ -33,12 +33,17 @@ because QNX's own libstdc++ and `sys/process.h` headers need it.
 types (a custom multiboot IFS with the tests baked in, and QNX's own unmodified
 `mkqnximage` disk image). All four load the kernel and then emit nothing.
 
-This isolates the cause: **QNX does not come up under QEMU TCG software
-emulation.** Cross-ISA translation was the initial suspicion, but the identical
-failure on a native x86_64 host rules it out, and the failure of QNX's own image
-rules out the custom IFS. KVM is required.
+This rules out two candidate causes -- cross-ISA translation (a native x86_64
+host fails identically) and the hand-written IFS (QNX's own unmodified image
+fails the same way). It does NOT establish the actual cause.
 
-On AWS that means a bare-metal instance; the attempt was blocked by an account
+Neither host had `/dev/kvm`, so missing hardware virtualisation is the leading
+hypothesis and the cheapest next test. It is not proven: no successful KVM boot
+exists for comparison, and no QNX documentation was consulted on TCG support.
+Emulated-platform gaps, a `-cpu qemu64` feature mismatch, and machine-type or
+firmware differences remain open -- see `qnx_boot_attempts.txt`.
+
+Testing that hypothesis on AWS needs bare metal, which was blocked by an account
 vCPU quota of 16 (x86 bare metal needs 48-96). A quota increase was requested and
 remained pending. Every AWS resource created was terminated and verified gone.
 

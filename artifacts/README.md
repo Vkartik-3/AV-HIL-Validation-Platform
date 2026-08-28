@@ -68,15 +68,21 @@ by the `ros-humble` job on x86_64 Ubuntu. Command:
   (producer threads -> buffer -> frame -> CRC -> WAL -> replay) and deliberately
   does NOT claim to measure DDS.
 - **QNX**: partially closed. SDP 8.0 was installed and licensed, and the
-  portable core CROSS-COMPILES cleanly for x86_64 QNX (see `qnx/`). No test was
-  EXECUTED on a QNX target: QEMU runs in TCG software emulation on this Apple
-  silicon host and QNX's startup-x86 never reaches userspace under it. Three
-  boot attempts and their output are recorded in `qnx/qnx_boot_attempts.txt`.
-  "Cross-compiles for QNX 8.0" is supported by these artifacts; "runs on QNX"
-  is not.
-- **AWS**: no EC2 instance was created. The configured credentials were invalid
-  (`InvalidClientTokenId`), and Linux/ROS2 was already covered by CI (x86_64)
-  and Docker (arm64), so no paid resource was launched. Nothing to terminate.
+  portable core CROSS-COMPILES cleanly for x86_64 QNX on BOTH macOS/Docker and a
+  native x86_64 Linux host (see `qnx/`). No test was EXECUTED on a QNX target:
+  five boot attempts across two host architectures and two image types (custom
+  IFS and QNX's own unmodified `mkqnximage` image) all load the kernel and then
+  emit nothing. Cross-ISA emulation and the custom IFS are ruled out; the actual
+  cause is still open, with missing `/dev/kvm` the leading hypothesis rather
+  than a demonstrated finding. All attempts and the alternatives not excluded
+  are recorded in `qnx/qnx_boot_attempts.txt`. "Cross-compiles for QNX 8.0" is
+  supported by these artifacts; "runs on QNX" is not.
+- **AWS**: one `t3.large` (us-east-1, Ubuntu 22.04) was launched to reproduce
+  the QNX cross-build on native x86_64 and to attempt a boot; it ran roughly 35
+  minutes. Bare metal, needed to test the KVM hypothesis, could not be launched
+  -- the account vCPU quota is 16 and x86 bare-metal types need 48-96. The
+  instance, its security group, its key pair and its volume were all terminated
+  and verified gone; no bare-metal instance was ever created.
 - **CAN through ROS2**: not achieved on any host tried. Docker Desktop's
   LinuxKit VM has no `vcan` module, and a `--privileged` CI container did not
   resolve it either -- the GitHub run's own annotations read

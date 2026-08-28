@@ -1,30 +1,107 @@
-QNX QEMU boot attempts (all failed to reach userspace)
-======================================================
+QNX BOOT ATTEMPTS - none reached userspace
+==========================================
 
-Host: Apple M-series arm64, macOS. qemu-system-x86_64 runs in TCG
-software-emulation mode -- there is no hardware virtualisation for x86 on
-this machine, so QNX's startup-x86 low-level init has no accelerator.
+Four attempts, two host architectures, two image types. All four load the QNX
+kernel and then produce no further console output.
 
---- Attempt 1: mkqnximage disk image, -nographic -serial mon:stdio ---
-Press Ctrl-B to configure iPXE (PCI 00:03.0)...^M                                                                               ^M
+SUMMARY
+-------
+  # | Host                     | Image                          | Last output
+  --|--------------------------|--------------------------------|---------------------------
+  1 | macOS arm64 (Apple M)    | mkqnximage disk (QNX-official) | "QNX v1.2d Boot Loader: .."
+  2 | macOS arm64 (Apple M)    | mkqnximage disk, -serial file: | (no bytes captured)
+  3 | macOS arm64 (Apple M)    | custom multiboot IFS           | "Booting from ROM.."
+  4 | x86_64 EC2 (Ubuntu 22.04)| custom multiboot IFS           | "Booting from ROM.."
+  5 | x86_64 EC2 (Ubuntu 22.04)| mkqnximage disk (QNX-official) | "QNX v1.2d Boot Loader: .."
 
-
-Booting from Hard Disk...^M
-
-QNX v1.2d Boot Loader: ^[[10;35H ..qemu-system-x86_64: terminating on signal 15 from pid 57827 (<unknown process>)
-
---- Attempt 2: same disk, -serial file: , single CPU ---
-bytes captured:        0 (no output)
-
---- Attempt 3: custom IFS via multiboot -kernel, foreground -nographic ---
-
-iPXE (http://ipxe.org) 00:03.0 CA00 PCI2.10 PnP PMM+3EFD1D60+3EF31D60 CA00^M
-Press Ctrl-B to configure iPXE (PCI 00:03.0)...^M                                                                               ^M
+  QEMU 9.x (macOS, Homebrew) and QEMU 6.2.0 (Ubuntu 22.04). Neither host had
+  /dev/kvm: the Mac has no x86 hardware virtualisation at all, and the EC2
+  instance was a t3.large, a virtualised guest where KVM is not exposed.
 
 
-Booting from ROM..qemu-system-x86_64: terminating on signal 15 from pid 0 (<unknown process>)
+RAW OUTPUT
+----------
 
-In all three the QNX kernel is loaded (bootloader / 'Booting from ROM'
-reached) but never produces console output. Console wiring was verified
-correct: the IFS uses startup-x86 -D8250..115200 with devc-ser8250 on
-/dev/ser1, and SeaBIOS output on the same serial path WAS captured.
+--- Attempt 1: macOS arm64, mkqnximage disk, -nographic -serial mon:stdio ---
+Booting from Hard Disk...
+QNX v1.2d Boot Loader: ..
+qemu-system-x86_64: terminating on signal 15
+
+--- Attempt 2: macOS arm64, same disk, -serial file:, single CPU ---
+0 bytes captured.
+
+--- Attempt 3: macOS arm64, custom IFS via multiboot -kernel, -nographic ---
+iPXE (http://ipxe.org) 00:03.0 CA00 PCI2.10 PnP PMM+3EFD1D60+3EF31D60 CA00
+Press Ctrl-B to configure iPXE (PCI 00:03.0)...
+Booting from ROM..
+qemu-system-x86_64: terminating on signal 15
+
+--- Attempt 4: x86_64 EC2, custom IFS via multiboot -kernel, -nographic ---
+SeaBIOS (version 1.15.0-1)
+iPXE (https://ipxe.org) 00:03.0 CA00 PCI2.10 PnP PMM+7FF8B340+7FECB340 CA00
+Press Ctrl-B to configure iPXE (PCI 00:03.0)...
+Booting from ROM..
+
+--- Attempt 5: x86_64 EC2, mkqnximage disk (unmodified QNX image), 300s ---
+SeaBIOS (version 1.15.0-1)
+Booting from Hard Disk...
+QNX v1.2d Boot Loader: ..
+qemu-system-x86_64: terminating on signal 15 from pid 7777 (timeout)
+
+
+WHAT THIS RULES OUT
+-------------------
+Two earlier hypotheses are excluded by the evidence above:
+
+  * NOT cross-ISA emulation. The first three attempts ran on Apple silicon,
+    where qemu-system-x86_64 must translate x86 to ARM. Attempts 4 and 5 ran on
+    a native x86_64 Linux host and failed identically, so ARM->x86 translation
+    is not the cause.
+
+  * NOT the hand-written IFS. Attempts 1, 2 and 5 used QNX's own unmodified
+    mkqnximage output. It fails the same way as the custom image, so the fault
+    is not in the IFS build file in this directory.
+
+Console wiring was also checked rather than assumed: the IFS uses
+"startup-x86 -D8250..115200" with devc-ser8250 on /dev/ser1, and SeaBIOS output
+on that same serial path WAS captured in attempts 1, 3, 4 and 5. A silent serial
+port is therefore not the explanation for the missing kernel output.
+
+
+WHAT IS *NOT* ESTABLISHED
+-------------------------
+The absence of KVM is the strongest remaining hypothesis, and it is the reason
+the next attempt should be made on a host with /dev/kvm. But it is a HYPOTHESIS,
+not a demonstrated cause. Nothing here proves it, because:
+
+  * No successful KVM boot was ever performed for comparison. Bare-metal EC2 was
+    blocked by an account vCPU quota of 16 (x86 bare-metal types need 48-96);
+    a quota increase was requested and was still pending.
+
+  * No QNX documentation was consulted stating that QNX 8.0 requires hardware
+    virtualisation, or that it is unsupported under QEMU TCG.
+
+Alternative explanations that these attempts do NOT exclude:
+
+  * Emulated-platform gaps. QNX's startup-x86 does low-level chipset, APIC and
+    timer initialisation; TCG may model something it depends on differently or
+    not at all. This would look identical to a KVM problem from the outside.
+
+  * CPU feature mismatch. Both hosts used "-cpu qemu64". QNX may require
+    instructions or MSRs that model does not provide. A different -cpu (e.g.
+    host/max/Nehalem) was not tried.
+
+  * Machine-type or firmware mismatch. Only "-M pc" with SeaBIOS was tried.
+    UEFI was not, and mkqnximage exposes a --boot-mode=[default|uefi|qemu]
+    option that was left at its default.
+
+  * Insufficient time. TCG is slow. Attempts were bounded at 150-900s. A boot
+    that is merely very slow rather than hung has not been ruled out, though
+    900s with no single byte of kernel output makes this unlikely.
+
+CONCLUSION
+----------
+"The portable core cross-compiles for QNX 8.0" is supported by the other files
+in this directory. "SensorForge runs on QNX" is NOT supported by anything here
+and is not claimed. The specific cause of the boot failure remains open; lack of
+KVM is the leading suspect and the cheapest next thing to test, not a finding.

@@ -173,20 +173,27 @@ Stated deliberately rather than papered over.
   Apple-silicon Mac and an x86_64 EC2 instance. Every attempt loads the kernel
   (`QNX v1.2d Boot Loader` / `Booting from ROM`) and then emits nothing.
 
-  The cause is isolated and is not the code: **QNX does not come up under QEMU's
-  TCG software emulation.** That was initially suspected to be cross-ISA
-  (ARM host emulating x86), but the identical failure on a native x86_64 host
-  rules that out -- including with QNX's own unmodified disk image, which
-  removes any doubt about the custom IFS. Console wiring was verified correct
+  Two candidate causes ARE ruled out. It is not cross-ISA emulation, because a
+  native x86_64 host fails identically to the Apple-silicon one. It is not the
+  hand-written IFS, because QNX's own unmodified `mkqnximage` image fails the
+  same way. Console wiring was checked rather than assumed
   (`startup-x86 -D8250..115200` with `devc-ser8250`, and SeaBIOS output on that
-  same serial path was captured).
+  same serial path was captured), so a silent serial port is not the explanation.
 
-  Running the suite therefore requires **KVM**, which on AWS means a bare-metal
-  instance. That was attempted and blocked by an account vCPU quota of 16
-  (every x86 bare-metal type needs 48-96); a quota increase was requested and
-  was still pending. All AWS resources created for the attempt were terminated.
-  Any x86_64 Linux machine with `/dev/kvm` would close this in about 20 minutes
-  using `cmake/qnx.toolchain.cmake` and `artifacts/qnx/test_ifs.build`.
+  The **actual cause remains open.** Neither host had `/dev/kvm`, so the absence
+  of hardware virtualisation is the leading hypothesis and the cheapest next
+  thing to test -- but it is a hypothesis, not a finding: no successful KVM boot
+  was performed for comparison, and no QNX documentation was consulted stating
+  that QNX 8.0 cannot run under QEMU TCG. Emulated-platform gaps, a `-cpu qemu64`
+  feature mismatch, and machine-type/firmware differences are all still open
+  possibilities; `artifacts/qnx/qnx_boot_attempts.txt` enumerates them.
+
+  Testing the KVM hypothesis on AWS needs a bare-metal instance, which was
+  blocked by an account vCPU quota of 16 (x86 bare-metal types need 48-96); an
+  increase was requested and was still pending. All AWS resources created for
+  the attempt were terminated and verified gone. Any x86_64 Linux machine with
+  `/dev/kvm` is the next step, using `cmake/qnx.toolchain.cmake` and
+  `artifacts/qnx/test_ifs.build`.
 
   So: **"the portable core cross-compiles for QNX 8.0" is defensible. "Runs on
   QNX" is not, and is not claimed anywhere.**
