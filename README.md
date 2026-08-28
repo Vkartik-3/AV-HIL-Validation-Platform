@@ -76,7 +76,7 @@ from a different machine.
 | ASan + UBSan | macOS arm64 | 198 tests, 0 sanitizer errors |
 | TSan, 30 s | macOS arm64 | 126,175,155 ring ops, 61,409,029 evictions, 0 races |
 | Deterministic replay | both | identical digest across runs; CI gates on it |
-| QNX 8.0 cross-compile | `q++` 12.2.0, x86_64 target | core + GoogleTest build clean; **not executed on target** |
+| QNX 8.0 cross-compile | `q++` 12.2.0, x86_64 target | core + GoogleTest build clean on **macOS/Docker and x86_64 Linux**; **not executed on target** |
 
 #### ROS2 end-to-end (the integrated path)
 
@@ -163,16 +163,30 @@ Stated deliberately rather than papered over.
   Notably `<filesystem>`, used by the WAL and offload code, compiled without
   incident.
 
-  What is NOT proven: **no test has run on QNX.** Three boot attempts
-  (`mkqnximage` disk image, and a purpose-built multiboot IFS with the tests
-  baked in) all load the kernel and then produce no console output. The cause
-  is the host, not the code: this is an Apple-silicon machine, so
-  `qemu-system-x86_64` runs in TCG software emulation with no hardware
-  virtualisation for x86, and QNX's `startup-x86` does not come up under it.
-  Console wiring was verified correct (`startup-x86 -D8250..115200` with
-  `devc-ser8250`; SeaBIOS output on the same serial path was captured).
-  Executing the suite needs an x86_64 host with virtualisation -- a bare-metal
-  Linux box or an EC2 instance with nested virt.
+  The cross-build was reproduced independently on a clean **x86_64 Linux host**
+  (AWS EC2, Ubuntu 22.04, kernel 6.8) as well as on macOS/Docker: same result,
+  **0 compile errors** (`artifacts/qnx/qnx_ec2_x86_64.txt`).
+
+  What is NOT proven: **no test has run on QNX.** Boot was attempted four times
+  across two hosts and two image types -- a purpose-built multiboot IFS with the
+  tests baked in, and QNX's own `mkqnximage` disk image -- on both an
+  Apple-silicon Mac and an x86_64 EC2 instance. Every attempt loads the kernel
+  (`QNX v1.2d Boot Loader` / `Booting from ROM`) and then emits nothing.
+
+  The cause is isolated and is not the code: **QNX does not come up under QEMU's
+  TCG software emulation.** That was initially suspected to be cross-ISA
+  (ARM host emulating x86), but the identical failure on a native x86_64 host
+  rules that out -- including with QNX's own unmodified disk image, which
+  removes any doubt about the custom IFS. Console wiring was verified correct
+  (`startup-x86 -D8250..115200` with `devc-ser8250`, and SeaBIOS output on that
+  same serial path was captured).
+
+  Running the suite therefore requires **KVM**, which on AWS means a bare-metal
+  instance. That was attempted and blocked by an account vCPU quota of 16
+  (every x86 bare-metal type needs 48-96); a quota increase was requested and
+  was still pending. All AWS resources created for the attempt were terminated.
+  Any x86_64 Linux machine with `/dev/kvm` would close this in about 20 minutes
+  using `cmake/qnx.toolchain.cmake` and `artifacts/qnx/test_ifs.build`.
 
   So: **"the portable core cross-compiles for QNX 8.0" is defensible. "Runs on
   QNX" is not, and is not claimed anywhere.**

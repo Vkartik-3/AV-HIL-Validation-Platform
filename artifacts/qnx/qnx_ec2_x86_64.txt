@@ -1,0 +1,33 @@
+===== QNX CROSS-BUILD ON x86_64 LINUX (AWS EC2 t3.large, Ubuntu 22.04) =====
+Linux 6.8.0-1063-aws x86_64
+SDP: com.qnx.qnx800
+QNX_HOST=/home/ubuntu/qnx800/host/linux/x86_64
+QNX_TARGET=/home/ubuntu/qnx800/target/qnx
+Toolchain:  12.2.0	Version:  gcc_ntox86_64
+	
+--- license ---
+Info: Working with installation with profile id com.qnx.qnx800_1 at /home/ubuntu/qnx800
+
+--- cross-build result ---
+0
+errors above
+/home/ubuntu/sf-qnx/sensorforge_unit_tests: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /usr/lib/ldqnx-64.so.2, BuildID[md5/uuid]=2d4bb6daa0d2dbb0f1e9ea63783028fa, with debug_info, not stripped
+  NEEDED               libregex.so.1
+  NEEDED               libstdc++.so.6
+  NEEDED               libm.so.3
+  NEEDED               libc.so.6
+  NEEDED               libgcc_s.so.1
+
+--- bootable IFS ---
+-rw-rw-r-- 1 ubuntu ubuntu 6541380 Aug 28 00:34 /home/ubuntu/test.ifs
+
+===== BOOT ATTEMPTS UNDER QEMU TCG (no /dev/kvm on t3) =====
+--- custom multiboot IFS ---
+Press Ctrl-B to configure iPXE (PCI 00:03.0)...^M                                                                               ^M
+
+
+Booting from ROM..--- QNX-official mkqnximage disk image ---
+
+Booting from Hard Disk...^M
+
+QNX v1.2d Boot Loader: ^[[10;35H ..qemu-system-x86_64: terminating on signal 15 from pid 7777 (timeout)
