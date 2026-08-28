@@ -331,7 +331,10 @@ target_link_libraries(wal_replay PUBLIC sensorforge_protocol)
 add_executable(e2e_reference tools/e2e_reference.cpp)
 target_link_libraries(e2e_reference PUBLIC sensorforge_pipeline)
 
-install(TARGETS scenario_runner parallel_runner wal_replay e2e_reference
+add_executable(capacity_sweep tools/capacity_sweep.cpp)
+target_link_libraries(capacity_sweep PUBLIC sensorforge_pipeline)
+
+install(TARGETS scenario_runner parallel_runner wal_replay e2e_reference capacity_sweep
   DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY scenario/scenarios DESTINATION share/${PROJECT_NAME}/scenarios)
 

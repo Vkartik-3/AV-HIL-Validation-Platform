@@ -64,6 +64,11 @@ target_link_libraries(wal_replay PRIVATE sensorforge_protocol)
 add_executable(e2e_reference ${SF_ROOT}/tools/e2e_reference.cpp)
 target_link_libraries(e2e_reference PRIVATE sensorforge_pipeline)
 
+# Capacity sweep: finds the highest multiple of the reference sensor mix the
+# pipeline sustains with ZERO drops, then confirms it over a long window.
+add_executable(capacity_sweep ${SF_ROOT}/tools/capacity_sweep.cpp)
+target_link_libraries(capacity_sweep PRIVATE sensorforge_pipeline)
+
 if(SENSORFORGE_BUILD_TESTS)
   find_package(GTest REQUIRED)
   enable_testing()

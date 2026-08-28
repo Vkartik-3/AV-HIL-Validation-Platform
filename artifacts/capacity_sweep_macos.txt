@@ -1,0 +1,45 @@
+===== SensorForge capacity sweep =====
+mix: 5 streams, scale 1.0 = 360 msgs/s, 8.53 MB/s of payload
+warmup=3.0s trial=12.0s confirm=60.0s bisect_rounds=4
+
+--- coarse ramp (doubling until first drop) ---
+  ramp     scale=  1.000  msgs/s=    360.1  MB/s=    8.56  drop=0         overwr=0       backlog=  -0.00 MB/s  CLEAN
+  ramp     scale=  2.000  msgs/s=    720.1  MB/s=   17.09  drop=0         overwr=0       backlog=  +0.00 MB/s  CLEAN
+  ramp     scale=  4.000  msgs/s=   1439.9  MB/s=   34.18  drop=0         overwr=0       backlog=  +0.00 MB/s  CLEAN
+  ramp     scale=  8.000  msgs/s=   2874.7  MB/s=   68.37  drop=0         overwr=0       backlog=  +0.00 MB/s  CLEAN
+  ramp     scale= 16.000  msgs/s=   5704.5  MB/s=  136.50  drop=0         overwr=0       backlog=  +0.00 MB/s  CLEAN
+  ramp     scale= 32.000  msgs/s=  11434.0  MB/s=  272.87  drop=0         overwr=0       backlog=  +0.00 MB/s  CLEAN
+  ramp     scale= 64.000  msgs/s=  22366.3  MB/s=  541.92  drop=2631      overwr=42      backlog=  -0.02 MB/s  DROPPED
+
+--- bisecting between 32.000 (clean) and 64.000 (dropped) ---
+  bisect   scale= 48.000  msgs/s=  17097.4  MB/s=  408.33  drop=0         overwr=0       backlog=  -0.00 MB/s  CLEAN
+  bisect   scale= 56.000  msgs/s=  20011.3  MB/s=  477.42  drop=443       overwr=0       backlog=  -0.02 MB/s  DROPPED
+  bisect   scale= 52.000  msgs/s=  18558.0  MB/s=  442.97  drop=106       overwr=0       backlog=  +0.00 MB/s  DROPPED
+  bisect   scale= 50.000  msgs/s=  17851.9  MB/s=  426.08  drop=123       overwr=0       backlog=  +0.00 MB/s  DROPPED
+
+--- sustained confirm at 60s per attempt (frame validation ON) ---
+  confirm  scale= 48.000  msgs/s=  17187.4  MB/s=  409.32  drop=4765      overwr=76      backlog=  +0.01 MB/s  DROPPED
+           ^ did not hold for 60s; backing off to scale 38.400
+  confirm  scale= 38.400  msgs/s=  13700.4  MB/s=  327.12  drop=233       overwr=0       backlog=  -0.00 MB/s  DROPPED
+           ^ did not hold for 60s; backing off to scale 30.720
+  confirm  scale= 30.720  msgs/s=  11007.4  MB/s=  262.34  drop=0         overwr=0       backlog=  -0.00 MB/s  CLEAN
+
+===== RESULT =====
+sustained scale        30.720 x the reference sensor mix
+measured window        60.01 s
+achieved msgs/sec      11007.4   (requested 11007.1)
+achieved frame MB/s    262.34
+WAL MB/s               262.70
+captured / recorded    660554 / 660560
+dropped                0
+overwritten            0
+backlog growth         -0.000 MB/s (queued 248 -> 0 bytes)
+capture->record us     p50=204.0 p99=11923.0 p999=96722.0 (n=694139)
+frames validated       694139
+CRC failures           0
+sequence gaps          0
+peak RSS               134234112 (128.0 MiB)
+peak queued bytes      31541342
+peak CPU               52.2%
+verdict                SUSTAINED: zero drops, zero overwrites, no backlog growth
+wrote artifacts/capacity_sweep_macos.json

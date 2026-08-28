@@ -39,6 +39,7 @@ other processes present.
 | `tsan_stress.txt` | `SENSORFORGE_STRESS_SECONDS=30 ./spsc_tsan_stress` (TSan) |
 | `e2e_paced.txt`, `e2e_reference_paced.json` | `./e2e_reference --duration 30` |
 | `e2e_saturate.txt`, `e2e_reference_saturate.json` | `./e2e_reference --duration 15 --saturate` |
+| `capacity_sweep_macos.txt`, `capacity_sweep_macos.json` | Ramp + bisect + 60 s confirm; the sustained zero-drop capacity figure and every trial behind it |
 | `fsync_cost.txt` | `./e2e_reference --duration 10 --fsync <policy>` x4 |
 | `offload_measurements.txt`, `e2e_offload_*.json` | `./e2e_reference --offload-dir D [--offload-down]` |
 | `replay_run1.txt`, `replay_run2.txt` | `./wal_replay --dir D --digest --verify` x2 |

@@ -76,6 +76,7 @@ from a different machine.
 | ASan + UBSan | macOS arm64 | 198 tests, 0 sanitizer errors |
 | TSan, 30 s | macOS arm64 | 126,175,155 ring ops, 61,409,029 evictions, 0 races |
 | Deterministic replay | both | identical digest across runs; CI gates on it |
+| Sustained capacity | macOS laptop | **11,007 msgs/s @ 262 MB/s for 60 s, zero drops** |
 | QNX 8.0 cross-compile | `q++` 12.2.0, x86_64 target | core + GoogleTest build clean on **macOS/Docker and x86_64 Linux**; **not executed on target** |
 
 #### ROS2 end-to-end (the integrated path)
@@ -99,6 +100,40 @@ peak queued bytes   camera 460,904 | lidar 196,721 | imu 3,564 | gps 128
 peak RSS            27.3 MB           CPU                 5.0 %
 replay              14,290 records, frame_verify ok=14,290 bad=0, digest stable
 ```
+
+#### Sustained capacity (the headroom figure)
+
+The paced run below is deliberately far below capacity and the saturated run is
+deliberately above it, so neither answers "how much can this actually take?".
+`tools/capacity_sweep.cpp` answers it: it ramps the whole sensor mix, bisects
+the boundary, then requires the winner to hold for a full 60-second window.
+
+A scale only counts as sustained if **all three** hold: zero drops, zero
+overwrites (an overwritten frame never reached the WAL), and **no backlog
+growth** -- because a run can post zero drops purely because a 96 MiB buffer has
+not filled up yet. Rates are what the pipeline actually accepted, not what the
+producers requested.
+
+```
+sustained          30.7x the reference sensor mix, held for 60 s
+                   11,007 msgs/s  |  262.3 MB/s framed  |  262.7 MB/s to the WAL
+integrity          660,554 captured, 0 dropped, 0 overwritten,
+                   694,139 frames validated, 0 CRC failures, 0 sequence gaps
+backlog            -0.000 MB/s (queue drained to empty by the end of the window)
+latency            capture-to-record p50 204 us | p99 11.9 ms | p999 96.7 ms
+resources          peak RSS 128.0 MiB, peak queued 31.5 MB, peak CPU 52%
+```
+
+Two things worth reading off that honestly. **Latency degrades near capacity**:
+p99 is 11.9 ms here versus 1.4 ms on the paced run, because the queues are
+genuinely deep at 30x load -- capacity and latency are a trade, not a free lunch.
+And the boundary is **unstable**: 48x passed a 12 s trial and failed at 60 s
+twice, so the tool stepped down until a scale actually held. The reported figure
+is the one that survived the long window, not the best one ever seen.
+
+Measured on the macOS development laptop (thermal throttling, shared disk, no
+pinning), so this is a floor rather than a ceiling; a controlled server would
+likely go higher. Raw sweep in `artifacts/capacity_sweep_macos.{txt,json}`.
 
 #### Core pipeline (no ROS, five-sensor mix incl. CAN-sized payloads)
 
