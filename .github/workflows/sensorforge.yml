@@ -69,7 +69,30 @@ jobs:
         env:
           ASAN_OPTIONS: detect_container_overflow=0:halt_on_error=1
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
-        run: ./build/sensorforge_unit_tests
+        run: |
+          set +e
+          ./build/sensorforge_unit_tests 2>&1 | tee asan.txt
+          rc=${PIPESTATUS[0]}
+          set -e
+          if [ $rc -ne 0 ]; then
+            # Name what failed. Without this the job reports only "exit code 1",
+            # which is undiagnosable without an authenticated log fetch -- and a
+            # sanitizer or timing failure here needs the test name to act on.
+            grep -E '^\[  FAILED  \]|ERROR: (Address|Leak)Sanitizer|runtime error:' asan.txt \
+              | sort -u | head -25 | while IFS= read -r line; do
+                  printf '::error::%s\n' "$(printf '%s' "$line" | tr -d '\r' | sed 's/%/%25/g')"
+                done
+            grep -B2 -A6 'Failure' asan.txt | head -60 | while IFS= read -r line; do
+              printf '::error::%s\n' "$(printf '%s' "$line" | tr -d '\r' | sed 's/%/%25/g')"
+            done
+            exit $rc
+          fi
+      - name: Upload sanitizer log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: asan-ubsan-log
+          path: asan.txt
 
   # 3. ThreadSanitizer over the SPSC ring + seqlock stress test.
   tsan:
