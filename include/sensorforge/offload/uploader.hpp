@@ -122,8 +122,19 @@ public:
   /// start(); exposed for tests.
   size_t recover_pending();
 
-  /// Block until the backlog drains or @p timeout_ms elapses. Test helper.
+  /**
+   * @brief Block until the backlog is fully drained, or @p timeout_ms elapses.
+   *
+   * "Drained" means the queue is empty AND no upload is still in flight. The
+   * distinction matters: the worker pops an item before transferring it, so a
+   * queue-empty check alone returns true while a transfer is still running, and
+   * a caller reading stats() at that moment sees a count that is about to
+   * change. That raced in CI.
+   */
   bool wait_drained(uint32_t timeout_ms);
+
+  /// True while the worker is transferring an item it has already dequeued.
+  bool upload_in_flight() const;
 
   UploaderStats stats() const;
   bool is_uploaded(uint32_t segment_id) const;
@@ -151,6 +162,9 @@ private:
   std::map<uint32_t, UploadStatus> manifest_;
   bool stop_ = false;
   bool healthy_ = true;
+  // Set while the worker holds an item it has dequeued but not yet finished
+  // transferring. Guarded by mtx_.
+  bool in_flight_ = false;
 
   std::thread worker_;
   std::atomic<bool> running_{false};

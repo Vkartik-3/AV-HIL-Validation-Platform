@@ -258,17 +258,23 @@ void Uploader::worker()
       }
       item = queue_.front();
       queue_.pop_front();
+      // Mark in-flight BEFORE releasing the lock, so a concurrent wait_drained
+      // can never observe "queue empty, nothing in flight" while this transfer
+      // is about to start.
+      in_flight_ = true;
     }
 
     const bool ok = dest_->put(item.path, object_name_for(item.segment_id));
 
     std::unique_lock<std::mutex> lk(mtx_);
+    in_flight_ = false;
     if (ok) {
       manifest_[item.segment_id] = UploadStatus::kUploaded;
       ++uploaded_;
       healthy_ = true;
       backoff_ms = cfg_.base_backoff_ms;
       persist_manifest();
+      cv_.notify_all();
       lk.unlock();
       if (cfg_.delete_after_upload) {
         // Only after an acknowledged upload, and only if asked.
@@ -304,14 +310,20 @@ bool Uploader::wait_drained(uint32_t timeout_ms)
   while (std::chrono::steady_clock::now() < deadline) {
     {
       std::lock_guard<std::mutex> lk(mtx_);
-      if (queue_.empty()) {
+      if (queue_.empty() && !in_flight_) {
         return true;
       }
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
   }
   std::lock_guard<std::mutex> lk(mtx_);
-  return queue_.empty();
+  return queue_.empty() && !in_flight_;
+}
+
+bool Uploader::upload_in_flight() const
+{
+  std::lock_guard<std::mutex> lk(mtx_);
+  return in_flight_;
 }
 
 bool Uploader::is_uploaded(uint32_t segment_id) const
