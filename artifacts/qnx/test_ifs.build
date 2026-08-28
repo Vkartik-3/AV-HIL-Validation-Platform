@@ -1,0 +1,24 @@
+[search=/qnx/qnx800/target/qnx/x86_64:/qnx/qnx800/target/qnx/x86_64/lib:/qnx/qnx800/target/qnx/x86_64/usr/lib:/qnx/qnx800/target/qnx/x86_64/boot/sys:/qnx/sf-qnx:/qnx]
+[+dupignore]
+[+optional]
+[uid=0 gid=0 dperms=0555 perms=0555]
+[image=64m]
+[virtual=x86_64,multiboot] boot = {
+    startup-x86 -D8250..115200
+    PATH=/proc/boot LD_LIBRARY_PATH=/proc/boot procnto-smp-instr
+}
+[+script] startup-script = {
+    procmgr_symlink ../../proc/boot/libc.so /usr/lib/ldqnx-64.so.2
+    display_msg "===SENSORFORGE-QNX-BEGIN==="
+    sensorforge_unit_tests
+    display_msg "===SENSORFORGE-QNX-END==="
+    shutdown
+}
+[type=link] /usr/lib/ldqnx-64.so.2=/proc/boot/libc.so
+[type=link] /tmp=/dev/shmem
+libc.so
+libstdc++.so.6
+libm.so.3
+libgcc_s.so.1
+libregex.so.1
+sensorforge_unit_tests

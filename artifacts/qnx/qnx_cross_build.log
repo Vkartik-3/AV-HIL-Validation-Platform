@@ -1,0 +1,175 @@
+[  2%] Building CXX object CMakeFiles/sensorforge_protocol.dir/qnx/sf/src/replay/wal_reader.cpp.o
+[  8%] Building CXX object CMakeFiles/sensorforge_protocol.dir/qnx/sf/src/replay/wal_writer.cpp.o
+[ 10%] Building CXX object CMakeFiles/sensorforge_protocol.dir/qnx/sf/src/core/resource_monitor.cpp.o
+[ 10%] Building CXX object CMakeFiles/sensorforge_protocol.dir/qnx/sf/src/protocol/frame_codec.cpp.o
+[ 13%] Building CXX object CMakeFiles/sensorforge_faults.dir/qnx/sf/faults/fault_engine.cpp.o
+cc: warning - lang-c++ is deprecated
+cc: warning - lang-c++ is deprecated
+cc: warning - lang-c++ is deprecated
+cc: warning - lang-c++ is deprecated
+cc: warning - lang-c++ is deprecated
+[ 16%] Linking CXX static library libsensorforge_faults.a
+[ 16%] Built target sensorforge_faults
+[ 18%] Linking CXX static library libsensorforge_protocol.a
+[ 18%] Built target sensorforge_protocol
+[ 21%] Building CXX object CMakeFiles/sensorforge_pipeline.dir/qnx/sf/src/pipeline/recorder.cpp.o
+[ 24%] Building CXX object CMakeFiles/spsc_tsan_stress.dir/qnx/sf/stress/spsc_tsan_stress.cpp.o
+[ 27%] Building CXX object CMakeFiles/wal_replay.dir/qnx/sf/src/replay/replay_main.cpp.o
+[ 29%] Building CXX object CMakeFiles/sensorforge_pipeline.dir/qnx/sf/src/offload/uploader.cpp.o
+cc: warning - lang-c++ is deprecated
+cc: warning - lang-c++ is deprecated
+cc: warning - lang-c++ is deprecated
+cc: warning - lang-c++ is deprecated
+In file included from /qnx/sf/stress/spsc_tsan_stress.cpp:38:
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: warning: use of 'std::hardware_destructive_interference_size' [-Winterference-size]
+   84 | inline constexpr size_t kCacheLine = std::hardware_destructive_interference_size;
+      |                                      ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: its value can vary between compiler versions or with different '-mtune' or '-mcpu' flags
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: if this use is part of a public ABI, change it to instead use a constant variable you define
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: the default value for the current CPU tuning is 64 bytes
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: you can stabilize this value with '--param hardware_destructive_interference_size=64', or disable this warning with '-Wno-interference-size'
+In file included from /qnx/sf/include/sensorforge/core/backpressure_policy.hpp:39,
+                 from /qnx/sf/include/sensorforge/pipeline/recorder.hpp:64,
+                 from /qnx/sf/src/pipeline/recorder.cpp:8:
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: warning: use of 'std::hardware_destructive_interference_size' [-Winterference-size]
+   84 | inline constexpr size_t kCacheLine = std::hardware_destructive_interference_size;
+      |                                      ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: its value can vary between compiler versions or with different '-mtune' or '-mcpu' flags
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: if this use is part of a public ABI, change it to instead use a constant variable you define
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: the default value for the current CPU tuning is 64 bytes
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: you can stabilize this value with '--param hardware_destructive_interference_size=64', or disable this warning with '-Wno-interference-size'
+[ 32%] Linking CXX executable spsc_tsan_stress
+cc: warning - lang-c++ is deprecated
+[ 35%] Linking CXX executable wal_replay
+cc: warning - lang-c++ is deprecated
+[ 35%] Built target spsc_tsan_stress
+[ 35%] Built target wal_replay
+[ 37%] Linking CXX static library libsensorforge_pipeline.a
+[ 37%] Built target sensorforge_pipeline
+[ 40%] Building CXX object CMakeFiles/sensorforge_unit_tests.dir/qnx/sf/test/unit/test_spsc_ring.cpp.o
+[ 45%] Building CXX object CMakeFiles/sensorforge_unit_tests.dir/qnx/sf/test/unit/test_seqlock.cpp.o
+[ 45%] Building CXX object CMakeFiles/sensorforge_unit_tests.dir/qnx/sf/test/unit/test_main.cpp.o
+[ 48%] Building CXX object CMakeFiles/sensorforge_unit_tests.dir/qnx/sf/test/unit/test_crc32c.cpp.o
+[ 51%] Building CXX object CMakeFiles/sensorforge_unit_tests.dir/qnx/sf/test/unit/test_frame_codec.cpp.o
+[ 54%] Building CXX object CMakeFiles/e2e_reference.dir/qnx/sf/tools/e2e_reference.cpp.o
+[ 56%] Building CXX object CMakeFiles/sensorforge_unit_tests.dir/qnx/sf/test/unit/test_backpressure.cpp.o
+[ 59%] Building CXX object CMakeFiles/sensorforge_unit_tests.dir/qnx/sf/test/unit/test_wal.cpp.o
+cc: warning - lang-c++ is deprecated
+cc: warning - lang-c++ is deprecated
+cc: warning - lang-c++ is deprecated
+cc: warning - lang-c++ is deprecated
+cc: warning - lang-c++ is deprecated
+cc: warning - lang-c++ is deprecated
+cc: warning - lang-c++ is deprecated
+cc: warning - lang-c++ is deprecated
+In file included from /qnx/sf/include/sensorforge/core/backpressure_policy.hpp:39,
+                 from /qnx/sf/include/sensorforge/pipeline/recorder.hpp:64,
+                 from /qnx/sf/tools/e2e_reference.cpp:53:
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: warning: use of 'std::hardware_destructive_interference_size' [-Winterference-size]
+   84 | inline constexpr size_t kCacheLine = std::hardware_destructive_interference_size;
+      |                                      ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: its value can vary between compiler versions or with different '-mtune' or '-mcpu' flags
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: if this use is part of a public ABI, change it to instead use a constant variable you define
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: the default value for the current CPU tuning is 64 bytes
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: you can stabilize this value with '--param hardware_destructive_interference_size=64', or disable this warning with '-Wno-interference-size'
+In file included from /qnx/sf/test/unit/test_spsc_ring.cpp:15:
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: warning: use of 'std::hardware_destructive_interference_size' [-Winterference-size]
+   84 | inline constexpr size_t kCacheLine = std::hardware_destructive_interference_size;
+      |                                      ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: its value can vary between compiler versions or with different '-mtune' or '-mcpu' flags
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: if this use is part of a public ABI, change it to instead use a constant variable you define
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: the default value for the current CPU tuning is 64 bytes
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: you can stabilize this value with '--param hardware_destructive_interference_size=64', or disable this warning with '-Wno-interference-size'
+In file included from /qnx/sf/include/sensorforge/core/backpressure_policy.hpp:39,
+                 from /qnx/sf/test/unit/test_backpressure.cpp:16:
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: warning: use of 'std::hardware_destructive_interference_size' [-Winterference-size]
+   84 | inline constexpr size_t kCacheLine = std::hardware_destructive_interference_size;
+      |                                      ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: its value can vary between compiler versions or with different '-mtune' or '-mcpu' flags
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: if this use is part of a public ABI, change it to instead use a constant variable you define
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: the default value for the current CPU tuning is 64 bytes
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: you can stabilize this value with '--param hardware_destructive_interference_size=64', or disable this warning with '-Wno-interference-size'
+[ 62%] Building CXX object CMakeFiles/sensorforge_unit_tests.dir/qnx/sf/test/unit/test_tcp_reassembler.cpp.o
+cc: warning - lang-c++ is deprecated
+[ 64%] Linking CXX executable e2e_reference
+[ 67%] Building CXX object CMakeFiles/sensorforge_unit_tests.dir/qnx/sf/test/unit/test_fault_injection.cpp.o
+cc: warning - lang-c++ is deprecated
+[ 70%] Building CXX object CMakeFiles/sensorforge_unit_tests.dir/qnx/sf/test/unit/test_metrics.cpp.o
+cc: warning - lang-c++ is deprecated
+cc: warning - lang-c++ is deprecated
+[ 72%] Building CXX object CMakeFiles/sensorforge_unit_tests.dir/qnx/sf/test/unit/test_stream_buffer.cpp.o
+cc: warning - lang-c++ is deprecated
+[ 72%] Built target e2e_reference
+[ 75%] Building CXX object CMakeFiles/sensorforge_unit_tests.dir/qnx/sf/test/unit/test_ring_overwrite.cpp.o
+cc: warning - lang-c++ is deprecated
+[ 78%] Building CXX object CMakeFiles/sensorforge_unit_tests.dir/qnx/sf/test/unit/test_wal_restart.cpp.o
+cc: warning - lang-c++ is deprecated
+[ 81%] Building CXX object CMakeFiles/sensorforge_unit_tests.dir/qnx/sf/test/unit/test_replay_digest.cpp.o
+cc: warning - lang-c++ is deprecated
+[ 83%] Building CXX object CMakeFiles/sensorforge_unit_tests.dir/qnx/sf/test/unit/test_sequence_integrity.cpp.o
+cc: warning - lang-c++ is deprecated
+In file included from /qnx/sf/include/sensorforge/core/backpressure_policy.hpp:39,
+                 from /qnx/sf/include/sensorforge/core/stream_buffer.hpp:38,
+                 from /qnx/sf/test/unit/test_stream_buffer.cpp:16:
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: warning: use of 'std::hardware_destructive_interference_size' [-Winterference-size]
+   84 | inline constexpr size_t kCacheLine = std::hardware_destructive_interference_size;
+      |                                      ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: its value can vary between compiler versions or with different '-mtune' or '-mcpu' flags
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: if this use is part of a public ABI, change it to instead use a constant variable you define
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: the default value for the current CPU tuning is 64 bytes
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: you can stabilize this value with '--param hardware_destructive_interference_size=64', or disable this warning with '-Wno-interference-size'
+In file included from /qnx/sf/test/unit/test_ring_overwrite.cpp:16:
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: warning: use of 'std::hardware_destructive_interference_size' [-Winterference-size]
+   84 | inline constexpr size_t kCacheLine = std::hardware_destructive_interference_size;
+      |                                      ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: its value can vary between compiler versions or with different '-mtune' or '-mcpu' flags
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: if this use is part of a public ABI, change it to instead use a constant variable you define
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: the default value for the current CPU tuning is 64 bytes
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: you can stabilize this value with '--param hardware_destructive_interference_size=64', or disable this warning with '-Wno-interference-size'
+[ 86%] Building CXX object CMakeFiles/sensorforge_unit_tests.dir/qnx/sf/test/unit/test_recorder.cpp.o
+cc: warning - lang-c++ is deprecated
+[ 89%] Building CXX object CMakeFiles/sensorforge_unit_tests.dir/qnx/sf/test/unit/test_recording_policy.cpp.o
+cc: warning - lang-c++ is deprecated
+[ 91%] Building CXX object CMakeFiles/sensorforge_unit_tests.dir/qnx/sf/test/unit/test_trigger.cpp.o
+cc: warning - lang-c++ is deprecated
+[ 94%] Building CXX object CMakeFiles/sensorforge_unit_tests.dir/qnx/sf/test/unit/test_offload.cpp.o
+[ 97%] Building CXX object CMakeFiles/sensorforge_unit_tests.dir/qnx/sf/test/unit/test_resource_monitor.cpp.o
+cc: warning - lang-c++ is deprecated
+cc: warning - lang-c++ is deprecated
+In file included from /qnx/sf/include/sensorforge/core/backpressure_policy.hpp:39,
+                 from /qnx/sf/include/sensorforge/pipeline/recorder.hpp:64,
+                 from /qnx/sf/test/unit/test_recorder.cpp:18:
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: warning: use of 'std::hardware_destructive_interference_size' [-Winterference-size]
+   84 | inline constexpr size_t kCacheLine = std::hardware_destructive_interference_size;
+      |                                      ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: its value can vary between compiler versions or with different '-mtune' or '-mcpu' flags
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: if this use is part of a public ABI, change it to instead use a constant variable you define
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: the default value for the current CPU tuning is 64 bytes
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: you can stabilize this value with '--param hardware_destructive_interference_size=64', or disable this warning with '-Wno-interference-size'
+In file included from /qnx/sf/include/sensorforge/core/backpressure_policy.hpp:39,
+                 from /qnx/sf/include/sensorforge/pipeline/recorder.hpp:64,
+                 from /qnx/sf/test/unit/test_recording_policy.cpp:18:
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: warning: use of 'std::hardware_destructive_interference_size' [-Winterference-size]
+   84 | inline constexpr size_t kCacheLine = std::hardware_destructive_interference_size;
+      |                                      ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: its value can vary between compiler versions or with different '-mtune' or '-mcpu' flags
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: if this use is part of a public ABI, change it to instead use a constant variable you define
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: the default value for the current CPU tuning is 64 bytes
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: you can stabilize this value with '--param hardware_destructive_interference_size=64', or disable this warning with '-Wno-interference-size'
+In file included from /qnx/sf/include/sensorforge/core/backpressure_policy.hpp:39,
+                 from /qnx/sf/include/sensorforge/pipeline/recorder.hpp:64,
+                 from /qnx/sf/test/unit/test_trigger.cpp:17:
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: warning: use of 'std::hardware_destructive_interference_size' [-Winterference-size]
+   84 | inline constexpr size_t kCacheLine = std::hardware_destructive_interference_size;
+      |                                      ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: its value can vary between compiler versions or with different '-mtune' or '-mcpu' flags
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: if this use is part of a public ABI, change it to instead use a constant variable you define
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: the default value for the current CPU tuning is 64 bytes
+/qnx/sf/include/sensorforge/core/spsc_ring.hpp:84:43: note: you can stabilize this value with '--param hardware_destructive_interference_size=64', or disable this warning with '-Wno-interference-size'
+/qnx/sf/test/unit/test_resource_monitor.cpp: In member function 'virtual void ResourceMonitorTest_CpuPercentIsNonNegative_Test::TestBody()':
+/qnx/sf/test/unit/test_resource_monitor.cpp:59:7: warning: compound assignment with 'volatile'-qualified left operand is deprecated [-Wvolatile]
+   59 |     x += i * 0.5;
+      |     ~~^~~~~~~~~~
+[100%] Linking CXX executable sensorforge_unit_tests
+cc: warning - lang-c++ is deprecated
+[100%] Built target sensorforge_unit_tests

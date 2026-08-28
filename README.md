@@ -76,6 +76,7 @@ from a different machine.
 | ASan + UBSan | macOS arm64 | 198 tests, 0 sanitizer errors |
 | TSan, 30 s | macOS arm64 | 126,175,155 ring ops, 61,409,029 evictions, 0 races |
 | Deterministic replay | both | identical digest across runs; CI gates on it |
+| QNX 8.0 cross-compile | `q++` 12.2.0, x86_64 target | core + GoogleTest build clean; **not executed on target** |
 
 #### ROS2 end-to-end (the integrated path)
 
@@ -146,10 +147,35 @@ Stated deliberately rather than papered over.
   registered download and a converter, which was out of scope here. Once such a
   bag exists the command is `ros2 bag play <bag> --remap /points:=/sensors/lidar`
   against a bridge configured per `config/Recorder.yaml`.
-- **QNX is not supported.** Not built, not tested, not claimed. QNX Software
-  Center 2.0.4 was obtained, but the SDP itself sits behind an authenticated
-  myQNX download and was never installed, so no QNX toolchain, target or test
-  result exists.
+- **QNX: the core CROSS-COMPILES; the tests were never EXECUTED on a QNX
+  target.** This distinction is the whole claim, so it is worth being exact.
+
+  What is proven (`artifacts/qnx/`): with QNX SDP 8.0 installed and licensed,
+  the ROS-free core builds cleanly for `x86_64-pc-nto-qnx8.0.0` using `q++`
+  (`gcc_ntox86_64`, GCC 12.2.0). GoogleTest was cross-built for the same target
+  and the suite links into a valid QNX Neutrino binary -- `ELF 64-bit LSB pie
+  executable, x86-64, interpreter /usr/lib/ldqnx-64.so.2`, needing
+  `libc.so.6`, `libstdc++.so.6`, `libm.so.3`, `libgcc_s.so.1`, `libregex.so.1`.
+  **Zero SensorForge source changes were required.** The only change was one
+  toolchain flag, `-D_QNX_SOURCE` (see `cmake/qnx.toolchain.cmake`), and it is
+  needed because QNX's *own* headers -- `bits/this_thread_sleep.h`,
+  `sys/process.h`, `bits/semaphore_base.h` -- do not compile without it.
+  Notably `<filesystem>`, used by the WAL and offload code, compiled without
+  incident.
+
+  What is NOT proven: **no test has run on QNX.** Three boot attempts
+  (`mkqnximage` disk image, and a purpose-built multiboot IFS with the tests
+  baked in) all load the kernel and then produce no console output. The cause
+  is the host, not the code: this is an Apple-silicon machine, so
+  `qemu-system-x86_64` runs in TCG software emulation with no hardware
+  virtualisation for x86, and QNX's `startup-x86` does not come up under it.
+  Console wiring was verified correct (`startup-x86 -D8250..115200` with
+  `devc-ser8250`; SeaBIOS output on the same serial path was captured).
+  Executing the suite needs an x86_64 host with virtualisation -- a bare-metal
+  Linux box or an EC2 instance with nested virt.
+
+  So: **"the portable core cross-compiles for QNX 8.0" is defensible. "Runs on
+  QNX" is not, and is not claimed anywhere.**
 - **`fsync` bounds loss to the live segment**, not to zero, unless
   `every_record` is selected; its cost is in `artifacts/fsync_cost.txt`.
 - **Replay ordering assumes a single writer** -- records are delivered in

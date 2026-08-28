@@ -24,6 +24,13 @@ include_directories(${SF_ROOT}/include)
 find_package(Threads REQUIRED)
 
 option(SENSORFORGE_BUILD_TESTS  "Build the GoogleTest unit suite"        ON)
+# Build only the PORTABLE core: no yaml-cpp, no nlohmann_json, and therefore no
+# scenario/report/parallel tests. Used for the QNX cross-build, where those two
+# third-party libraries are not available and are not what is being validated --
+# the portable core is. Everything else (protocol, replay, ring, seqlock,
+# stream buffer, recorder, offload, trigger, policy, resource sampler) is built
+# and tested exactly as on Linux/macOS.
+option(SENSORFORGE_CORE_ONLY    "Build only the dependency-free portable core" OFF)
 option(SENSORFORGE_BUILD_STRESS "Build the SPSC/seqlock stress test"     ON)
 option(SENSORFORGE_BUILD_BENCH  "Build the Google Benchmark harness"     OFF)
 option(SENSORFORGE_BUILD_FUZZ   "Build the libFuzzer harnesses (Clang)"  OFF)
@@ -59,18 +66,19 @@ target_link_libraries(e2e_reference PRIVATE sensorforge_pipeline)
 
 if(SENSORFORGE_BUILD_TESTS)
   find_package(GTest REQUIRED)
-  find_package(yaml-cpp REQUIRED)
   enable_testing()
+  # Fault engine: ROS-free and dependency-free, so it builds everywhere.
+  add_library(sensorforge_faults STATIC ${SF_ROOT}/faults/fault_engine.cpp)
+  target_include_directories(sensorforge_faults PUBLIC ${SF_ROOT})
+  target_link_libraries(sensorforge_faults PUBLIC Threads::Threads)
+  if(NOT SENSORFORGE_CORE_ONLY)
+  find_package(yaml-cpp REQUIRED)
   # Non-ROS scenario library (parser + assertions) for the scenario tests.
   add_library(sensorforge_scenario STATIC
     ${SF_ROOT}/scenario/scenario.cpp
     ${SF_ROOT}/scenario/assertion.cpp)
   target_include_directories(sensorforge_scenario PUBLIC ${SF_ROOT})
   target_link_libraries(sensorforge_scenario PUBLIC yaml-cpp)
-  # Fault engine (non-ROS).
-  add_library(sensorforge_faults STATIC ${SF_ROOT}/faults/fault_engine.cpp)
-  target_include_directories(sensorforge_faults PUBLIC ${SF_ROOT})
-  target_link_libraries(sensorforge_faults PUBLIC Threads::Threads)
   # Report library (non-ROS).
   find_package(nlohmann_json REQUIRED)
   add_library(sensorforge_report STATIC
@@ -79,7 +87,8 @@ if(SENSORFORGE_BUILD_TESTS)
     ${SF_ROOT}/report/html_report.cpp)
   target_include_directories(sensorforge_report PUBLIC ${SF_ROOT})
   target_link_libraries(sensorforge_report PUBLIC sensorforge_scenario nlohmann_json::nlohmann_json)
-  add_executable(sensorforge_unit_tests
+  endif()
+  set(SF_CORE_TEST_SOURCES
     ${SF_ROOT}/test/unit/test_main.cpp
     ${SF_ROOT}/test/unit/test_crc32c.cpp
     ${SF_ROOT}/test/unit/test_frame_codec.cpp
@@ -88,11 +97,8 @@ if(SENSORFORGE_BUILD_TESTS)
     ${SF_ROOT}/test/unit/test_wal.cpp
     ${SF_ROOT}/test/unit/test_backpressure.cpp
     ${SF_ROOT}/test/unit/test_tcp_reassembler.cpp
-    ${SF_ROOT}/test/unit/test_scenario.cpp
     ${SF_ROOT}/test/unit/test_fault_injection.cpp
-    ${SF_ROOT}/test/unit/test_report.cpp
     ${SF_ROOT}/test/unit/test_metrics.cpp
-    ${SF_ROOT}/test/unit/test_parallel.cpp
     ${SF_ROOT}/test/unit/test_stream_buffer.cpp
     ${SF_ROOT}/test/unit/test_ring_overwrite.cpp
     ${SF_ROOT}/test/unit/test_wal_restart.cpp
@@ -104,11 +110,29 @@ if(SENSORFORGE_BUILD_TESTS)
     ${SF_ROOT}/test/unit/test_offload.cpp
     ${SF_ROOT}/test/unit/test_resource_monitor.cpp
   )
+  # These pull in yaml-cpp (scenario) or nlohmann_json (report).
+  set(SF_DEPENDENT_TEST_SOURCES
+    ${SF_ROOT}/test/unit/test_scenario.cpp
+    ${SF_ROOT}/test/unit/test_report.cpp
+    ${SF_ROOT}/test/unit/test_parallel.cpp
+  )
+  if(SENSORFORGE_CORE_ONLY)
+    add_executable(sensorforge_unit_tests ${SF_CORE_TEST_SOURCES})
+  else()
+    add_executable(sensorforge_unit_tests
+      ${SF_CORE_TEST_SOURCES} ${SF_DEPENDENT_TEST_SOURCES})
+  endif()
   target_include_directories(sensorforge_unit_tests PRIVATE ${SF_ROOT}/test/unit ${SF_ROOT})
-  target_link_libraries(sensorforge_unit_tests
-    sensorforge_protocol sensorforge_pipeline
-    sensorforge_scenario sensorforge_faults sensorforge_report
-    GTest::gtest GTest::gtest_main Threads::Threads)
+  if(SENSORFORGE_CORE_ONLY)
+    target_link_libraries(sensorforge_unit_tests
+      sensorforge_protocol sensorforge_pipeline sensorforge_faults
+      GTest::gtest GTest::gtest_main Threads::Threads)
+  else()
+    target_link_libraries(sensorforge_unit_tests
+      sensorforge_protocol sensorforge_pipeline
+      sensorforge_scenario sensorforge_faults sensorforge_report
+      GTest::gtest GTest::gtest_main Threads::Threads)
+  endif()
   add_test(NAME unit COMMAND sensorforge_unit_tests)
 endif()
 

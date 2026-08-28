@@ -67,10 +67,13 @@ by the `ros-humble` job on x86_64 Ubuntu. Command:
   CI job. The end-to-end workload exercises the SensorForge core directly
   (producer threads -> buffer -> frame -> CRC -> WAL -> replay) and deliberately
   does NOT claim to measure DDS.
-- **QNX**: QNX Software Center 2.0.4 was downloaded, but that is the package
-  manager, not the SDP. The SDP itself requires an authenticated myQNX download
-  which was not completed, so no toolchain, target or test result exists. Not
-  built, not tested, not claimed.
+- **QNX**: partially closed. SDP 8.0 was installed and licensed, and the
+  portable core CROSS-COMPILES cleanly for x86_64 QNX (see `qnx/`). No test was
+  EXECUTED on a QNX target: QEMU runs in TCG software emulation on this Apple
+  silicon host and QNX's startup-x86 never reaches userspace under it. Three
+  boot attempts and their output are recorded in `qnx/qnx_boot_attempts.txt`.
+  "Cross-compiles for QNX 8.0" is supported by these artifacts; "runs on QNX"
+  is not.
 - **AWS**: no EC2 instance was created. The configured credentials were invalid
   (`InvalidClientTokenId`), and Linux/ROS2 was already covered by CI (x86_64)
   and Docker (arm64), so no paid resource was launched. Nothing to terminate.

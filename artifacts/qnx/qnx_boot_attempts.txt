@@ -1,0 +1,30 @@
+QNX QEMU boot attempts (all failed to reach userspace)
+======================================================
+
+Host: Apple M-series arm64, macOS. qemu-system-x86_64 runs in TCG
+software-emulation mode -- there is no hardware virtualisation for x86 on
+this machine, so QNX's startup-x86 low-level init has no accelerator.
+
+--- Attempt 1: mkqnximage disk image, -nographic -serial mon:stdio ---
+Press Ctrl-B to configure iPXE (PCI 00:03.0)...^M                                                                               ^M
+
+
+Booting from Hard Disk...^M
+
+QNX v1.2d Boot Loader: ^[[10;35H ..qemu-system-x86_64: terminating on signal 15 from pid 57827 (<unknown process>)
+
+--- Attempt 2: same disk, -serial file: , single CPU ---
+bytes captured:        0 (no output)
+
+--- Attempt 3: custom IFS via multiboot -kernel, foreground -nographic ---
+
+iPXE (http://ipxe.org) 00:03.0 CA00 PCI2.10 PnP PMM+3EFD1D60+3EF31D60 CA00^M
+Press Ctrl-B to configure iPXE (PCI 00:03.0)...^M                                                                               ^M
+
+
+Booting from ROM..qemu-system-x86_64: terminating on signal 15 from pid 0 (<unknown process>)
+
+In all three the QNX kernel is loaded (bootloader / 'Booting from ROM'
+reached) but never produces console output. Console wiring was verified
+correct: the IFS uses startup-x86 -D8250..115200 with devc-ser8250 on
+/dev/ser1, and SeaBIOS output on the same serial path WAS captured.

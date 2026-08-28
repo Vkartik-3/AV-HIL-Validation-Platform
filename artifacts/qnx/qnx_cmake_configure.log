@@ -1,0 +1,15 @@
+-- The CXX compiler identification is QCC 12.2.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /qnx/qnx800/host/linux/x86_64/usr/bin/q++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Looking for C++ include pthread.h
+-- Looking for C++ include pthread.h - found
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE  
+-- Found GTest: /qnx/gtest-qnx/lib/cmake/GTest/GTestConfig.cmake (found version "1.14.0")  
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /qnx/sf-qnx

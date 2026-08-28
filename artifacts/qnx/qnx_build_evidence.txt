@@ -1,0 +1,40 @@
+===== QNX ENVIRONMENT =====
+com.qnx.qnx800
+SDP root: /qnx/qnx800
+QNX_HOST=/qnx/qnx800/host/linux/x86_64
+QNX_TARGET=/qnx/qnx800/target/qnx
+--- compiler ---
+cc: targets available in /qnx/qnx800/host/linux/x86_64/etc/qcc:
+	12.2.0,gcc_ntox86_64	(default)
+	12.2.0,gcc_ntoaarch64le
+	12.2.0,gcc_ntox86_64_cxx
+	12.2.0,gcc_ntox86_64_gpp
+	12.2.0,gcc_ntoaarch64le_cxx
+	12.2.0,gcc_ntoaarch64le_gpp
+Toolchain:  12.2.0	Version:  gcc_ntox86_64
+	
+--- license ---
+License Directory: /root/.qnx/license/
+[<KEY>] - Activated - QNX Software Development Platform 8.0 Education (Development Seat with IDE)
+Info: Working with installation with profile id com.qnx.qnx800_1 at /qnx/qnx800
+
+===== CROSS-COMPILE RESULT =====
+-rwxr-xr-x 1 root root 1947592 Aug 27 23:50 /qnx/sf-qnx/sensorforge_unit_tests
+-rwxr-xr-x 1 root root   22880 Aug 27 23:49 /qnx/sf-qnx/spsc_tsan_stress
+/qnx/sf-qnx/sensorforge_unit_tests: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /usr/lib/ldqnx-64.so.2, BuildID[md5/uuid]=ac1920331d248cbf2c89b62fb6450e24, with debug_info, not stripped
+--- dynamic deps ---
+  NEEDED               libregex.so.1
+  NEEDED               libstdc++.so.6
+  NEEDED               libm.so.3
+  NEEDED               libc.so.6
+  NEEDED               libgcc_s.so.1
+--- GoogleTest cross-built ---
+-rw-r--r-- 1 root root 976740 Aug 27 23:49 /qnx/gtest-qnx/lib/libgtest.a
+-rw-r--r-- 1 root root   2782 Aug 27 23:49 /qnx/gtest-qnx/lib/libgtest_main.a
+--- bootable IFS ---
+-rw-r--r-- 1 root root 6541380 Aug 28 00:10 /qnx/test.ifs
+
+===== BUILD WARNINGS (non-fatal) =====
+11
+warning: compound assignment with 'volatile'-qualified left operand is deprecated 
+warning: use of 'std::hardware_destructive_interference_size' 
